@@ -24,6 +24,12 @@ python3 cirode.py <netlist filename> <name of circuit>
 ```
 This will output a <name of circuit>.hpp file based on the circuit in descibed in netlist which can be used in an itegrator, see boost_ode_lrc.cpp
 
+#### Makefile Example
+This example will compile the circuit described in the netlist file to a c++ file.
+
+
+#### simple_lrc.py
+This example shows how to simulate a simple circuit in python.
 
 # ToDo
 - Implement two port devices, e.g. inductor coupling
