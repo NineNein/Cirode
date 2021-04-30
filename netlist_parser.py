@@ -4,7 +4,7 @@ RXXXXXXX N1 N2 VALUE
 CXXXXXXX N+ N- VALUE 
 LYYYYYYY N+ N- VALUE
 
-IC starting current or voltage
+Iname N+ N- VALUE
 
 """
 
@@ -71,10 +71,24 @@ def capacitor(line, component_list, namelist):
 
     return True
 
+def current_source(line, component_list, namelist):
+    words, nodes = oneport(line, namelist)
+
+    if words[0][0] != "i":
+        return False
+
+    name = words[0].upper()
+    value = float(words[3])
+    
+    component_list.append(circuit.IS(name, nodes , value))
+
+    return True
+
 components = [
     resistor,
     inductor,
     capacitor,
+    current_source,
 ]
 
 def parse_netlist(netlist_io):
