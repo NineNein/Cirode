@@ -28,21 +28,16 @@ def compile2cpp(Circuit, circuit_name, output_file):
     dt_expr = []
     for i, idx in enumerate(idxs):
         idx_state = X.state_vector["dt"][idx]
-        print(idx_state)
         dt_expr.append("dxdt[" + str(i)+ "]=" +  ccode(res[idx_state]))
 
-    print("Voltage ", X.number_of_nodes)
     #Generate expression other circuit quantities
     quant_expr = []
     for idx in range(X.number_of_nodes-1):
         name = "V_" + str(idx+1)
-        print(idx)
         quant_expr.append("quants." + name + " = " +  ccode(res[idx]))
 
-    print("Current")
     for id, idx in X.state_vector["current"].items():
         name = "I_" + Cir.name_by_id(id)
-        print(idx)
         quant_expr.append("quants." + name + " = " +  ccode(res[idx]))
 
 
