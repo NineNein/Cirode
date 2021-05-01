@@ -10,6 +10,8 @@ def compile2cpp(Circuit, circuit_name, output_file):
     m = sy.Matrix(Y)
     im = m**-1
 
+    
+
     #Prepare Righ Hand Side
     idxs = sorted(list(X.state_vector["dt"].keys()))
     for i, idx in enumerate(idxs):
@@ -19,24 +21,28 @@ def compile2cpp(Circuit, circuit_name, output_file):
 
     #Solve System
     rhs = sy.Matrix(RHS)
-    res = (rhs.T*im).T   ### arg...but must be like this
+    res = (rhs.T*im.T).T #Upsa now its right...
 
 
     #Generate expression for dy/dt = f(y)
     dt_expr = []
     for i, idx in enumerate(idxs):
         idx_state = X.state_vector["dt"][idx]
+        print(idx_state)
         dt_expr.append("dxdt[" + str(i)+ "]=" +  ccode(res[idx_state]))
 
-  
+    print("Voltage ", X.number_of_nodes)
     #Generate expression other circuit quantities
     quant_expr = []
-    for idx in range(X.number_of_nodes):
+    for idx in range(X.number_of_nodes-1):
         name = "V_" + str(idx+1)
+        print(idx)
         quant_expr.append("quants." + name + " = " +  ccode(res[idx]))
 
+    print("Current")
     for id, idx in X.state_vector["current"].items():
         name = "I_" + Cir.name_by_id(id)
+        print(idx)
         quant_expr.append("quants." + name + " = " +  ccode(res[idx]))
 
 
@@ -83,7 +89,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
 
     #Fill quantities struct with std_values
     quantities = []
-    for n in range(X.number_of_nodes):
+    for n in range(X.number_of_nodes-1):
         value = "V_" + str(n+1)
         quantities.append(value)
 

@@ -38,7 +38,7 @@ def integration(t, Y):
     for y, idx in zip(Y, idxs):
         rhs[X.state_vector["dt"][idx]] = y
 
-    state = rhs.dot(iY)
+    state = rhs.dot(iY.transpose())
     dt = np.zeros(len(Y))
 
     for i, idx in enumerate(idxs):
