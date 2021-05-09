@@ -78,8 +78,11 @@ int main(int /* argc */ , char** /* argv */ )
 
     for( size_t i=0; i<=steps; i++ )
     {
+
+        parallel_lrc::Quantities quantities = lrc.quantities(x_vec[i]);
         out.write(reinterpret_cast<const char*>(&x_vec[i][0]), sizeof(double));
         out.write(reinterpret_cast<const char*>(&x_vec[i][1]), sizeof(double));
+        out.write(reinterpret_cast<const char*>(&quantities.I_C1), sizeof(double));
     }
 
     out.close();
