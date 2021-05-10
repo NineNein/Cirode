@@ -3,7 +3,7 @@ The aim of this project is to create a tool which can compile a circuit into a s
 order ordinary differential equation (ODE) which can be solved by an integrator of the choice of the user.
 
 The motivation for this project was the need to add a simulation of a circuit to another simulation. Also to find a quicker and more efficient way to derive the ODE for the circuit than by hand.
-
+On the one hand I learned something on the other hand i could have just used: http://lcapy.elec.canterbury.ac.nz/
 
 # Requirements 
 ### Python
