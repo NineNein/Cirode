@@ -35,3 +35,31 @@ This example shows how to simulate a simple circuit in python.
 - Implement two port devices, e.g. inductor coupling
 - Implement (better) Sources
 - Implement output of ODE
+
+
+
+# Stamps for Capacitor and Inductor
+dt/dx is handeld as variable, and x is handeld as known. Such the system can be expressed
+as dt/dx = f(x). This can be then solved by any integrator who accept this form.
+
+Values in brackets (x) are fixed, and wont be added if an other matrix stamp is added.
+
+## Capacitor Stamp
+
+|    | l | k | br | dl | dk |
+|:--:|:-:|:-:|:--:|:--:|:--:|
+| l  |   |   | 1  |    |    |
+| k  |   |   | -1 |    |    |
+| br |   |   | 1  | C  | -C |
+| dl | (1) |   |    |    |    |
+| dk |   | (1) |    |    |    |
+
+
+## Indcutor Stamp
+
+|    | l | k  | br  | di |
+|:--:|:-:|:--:|:---:|:--:|
+| l  |   |    | 1   |    |
+| k  |   |    | -1  |    |
+| br | 1 | -1 |     | L  |
+| di |   |    | (1) |    |
