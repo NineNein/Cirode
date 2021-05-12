@@ -100,6 +100,8 @@ def parse_netlist(netlist_io):
         if line.lstrip().startswith("*") or line.isspace():
             continue
 
+        line = line.split("*")[0]
+
         found = False
         for component in components:
             if component(line, component_list, namelist):

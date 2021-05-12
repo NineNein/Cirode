@@ -11,6 +11,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
     im = m**-1
 
     
+    
 
     #Prepare Righ Hand Side
     idxs = sorted(list(X.state_vector["dt"].keys()))
@@ -29,6 +30,20 @@ def compile2cpp(Circuit, circuit_name, output_file):
     for i, idx in enumerate(idxs):
         idx_state = X.state_vector["dt"][idx]
         dt_expr.append("dxdt[" + str(i)+ "]=" +  ccode(res[idx_state]))
+
+    # x = ["" for i in range(len(res))]
+    # for idx in range(X.number_of_nodes-1):
+    #     x[idx] = str(idx) + ": V_" + str(idx+1)
+
+    # for id, idx in X.state_vector["current"].items():
+    #     x[idx] = str(idx) + ": I_" + Cir.name_by_id(id)
+
+    # for i, idx in enumerate(idxs):
+    #     idx_state = X.state_vector["dt"][idx]
+    #     x[idx_state] = str(idx_state) + ": dxdt[" + str(i) + "]"
+
+
+    # print(x)
 
     #Generate expression other circuit quantities
     quant_expr = []

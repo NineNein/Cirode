@@ -202,7 +202,7 @@ class C(OnePortElement):
                 dk = state_vector.add_dt(k)
                 Y[dk][k] = 1 ## add unit equation
 
-            Y[k][dk] += value  #maybe += or just =
+            Y[k][br_idx] += 1
             Y[br_idx][dk] += value
         
         if l >= 0:
@@ -211,7 +211,7 @@ class C(OnePortElement):
                 dl = state_vector.add_dt(l)
                 Y[dl][l] = 1 ## add unit equatio
 
-            Y[l][dl] += -value
+            Y[l][br_idx] += -1
             Y[br_idx][dl] += -value
 
         Y[br_idx][br_idx] = 1
@@ -250,12 +250,12 @@ class L(OnePortElement):
             Y[di][br_idx] = 1 ## add unit equation
 
         if k >= 0:
-            Y[k][br_idx] = 1
-            Y[br_idx][k] = 1
+            Y[k][br_idx] += 1
+            Y[br_idx][k] += 1
         
         if l >= 0:
-            Y[l][br_idx] = -1
-            Y[br_idx][l] = -1
+            Y[l][br_idx] += -1
+            Y[br_idx][l] += -1
 
         Y[br_idx][di] = value
 
@@ -328,6 +328,10 @@ class Circuit():
         Y = amatrix()
         RHS = avector() # soruces
         X = state_vector(n)
+
+        if symbolic:
+            Y = amatrix(init_value = 0)
+            RHS = avector(init_value = 0) # soruces
 
         ## Add Stamp to Matrices
         for n1 ,n2 , data in self.G.edges(data=True):
