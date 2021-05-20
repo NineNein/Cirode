@@ -1,3 +1,8 @@
+# Currently adding Controlled sources
+- controlled sources can be used to implement diodes
+- uses GSL libary to find roots
+
+
 # Integrator Independent MNA Circuit Simulator
 The aim of this project is to create a tool which can compile a circuit into a system of first
 order ordinary differential equation (ODE) which can be solved by an integrator of the choice of the user.
