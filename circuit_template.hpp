@@ -42,10 +42,14 @@ namespace {{circuit_name}}
 
         {{circuit_name}}(Components components) : components(components) { }
 
+        {% if exprs is defined and exprs[0] is defined -%}
         {% if Sources is defined and Sources[0] is defined -%}
         Quantities quantities(const state_type &x, const Sources sources)
         {% else -%}
         Quantities quantities(const state_type &x)
+        {% endif -%}
+        {% else -%}
+        Quantities quantities(const Sources sources)
         {% endif -%}
         {
             Quantities quants;
@@ -55,6 +59,7 @@ namespace {{circuit_name}}
             return quants;
         }
 
+        {% if exprs is defined and exprs[0] is defined -%}
         {% if Sources is defined and Sources[0] is defined -%}
         void operator() ( const state_type &x , state_type &dxdt , const double /* t */, const Sources sources )
         {% else -%}
@@ -65,6 +70,7 @@ namespace {{circuit_name}}
                 {{expr}};
             {% endfor %}
         }
+        {% endif -%}
     };
 
 }

@@ -13,7 +13,7 @@ import circuit
 from circuit import Circuit
 
 def oneport(line, namelist):
-    line = line.lower()
+    #line = line.lower()
     words = line.split()
 
     if len(words) < 3:
@@ -33,7 +33,7 @@ def oneport(line, namelist):
 def resistor(line, component_list, namelist):
     words, nodes = oneport(line, namelist)
 
-    if words[0][0] != "r":
+    if words[0][0].lower() != "r":
         return False
 
     name = words[0].upper()
@@ -47,7 +47,7 @@ def resistor(line, component_list, namelist):
 def inductor(line, component_list, namelist):
     words, nodes = oneport(line, namelist)
 
-    if words[0][0] != "l":
+    if words[0][0].lower() != "l":
         return False
 
     name = words[0].upper()
@@ -61,7 +61,7 @@ def inductor(line, component_list, namelist):
 def capacitor(line, component_list, namelist):
     words, nodes = oneport(line, namelist)
 
-    if words[0][0] != "c":
+    if words[0][0].lower() != "c":
         return False
 
     name = words[0].upper()
@@ -74,7 +74,7 @@ def capacitor(line, component_list, namelist):
 def current_source(line, component_list, namelist):
     words, nodes = oneport(line, namelist)
 
-    if words[0][0] != "i":
+    if words[0][0].lower() != "i":
         return False
 
     name = words[0].upper()
@@ -84,11 +84,45 @@ def current_source(line, component_list, namelist):
 
     return True
 
+def votlage_source(line, component_list, namelist):
+    words, nodes = oneport(line, namelist)
+
+    if words[0][0].lower() != "v":
+        return False
+
+    name = words[0].upper()
+    value = float(words[3])
+    
+    component_list.append(circuit.VS(name, nodes , value))
+
+    return True
+
+def ctrl_current_source(line, component_list, namelist):
+    words, nodes = oneport(line, namelist)
+
+    if words[0][0].lower() != "g":
+        return False
+
+    name = words[0].upper()
+    
+    value = float(words[3])
+
+    idx = len(' '.join(words[:4]))
+    expression = line[idx+1:-1]
+
+    print(expression)
+    
+    component_list.append(circuit.CTRL_CS(name, nodes , expression, value))
+
+    return True
+
 components = [
     resistor,
     inductor,
     capacitor,
     current_source,
+    votlage_source,
+    ctrl_current_source,
 ]
 
 def parse_netlist(netlist_io):
@@ -97,10 +131,10 @@ def parse_netlist(netlist_io):
     namelist = ["GND"]
 
     for line in netlist_io:
-        if line.lstrip().startswith("*") or line.isspace():
+        if line.lstrip().startswith("#") or line.isspace():
             continue
 
-        line = line.split("*")[0]
+        line = line.split("#")[0]
 
         found = False
         for component in components:

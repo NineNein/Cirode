@@ -3,18 +3,24 @@ from sympy import *
 import sympy as sy
 import re
 
+
 def compile2cpp(Circuit, circuit_name, output_file):
     Cir = Circuit
 
     X, Y, RHS = Cir.matrices()
-    m = sy.Matrix(Y)
-    im = m**-1
-
-    
-    
 
     #Prepare Righ Hand Side
     idxs = sorted(list(X.state_vector["dt"].keys()))
+
+    if len(idxs) == 0:
+        #raise ValueError("Netlist needs an dynamic Element")
+        if len(X.state_vector["sources"]) == 0:
+            raise ValueError("Netlist needs an dynamic Element or a source")
+
+    m = sy.Matrix(Y)
+    pprint(m)
+    im = m**-1
+
     for i, idx in enumerate(idxs):
         value = sy.Symbol("x["+ str(i) + "]")
         idx_state = X.state_vector["dt"][idx]
@@ -45,6 +51,19 @@ def compile2cpp(Circuit, circuit_name, output_file):
 
     # print(x)
 
+    
+
+    #Fill quantities struct with std_values
+    quantities = []
+    for n in range(X.number_of_nodes-1):
+        value = "V_" + str(n+1)
+        quantities.append(value)
+
+    for id, idx in X.state_vector["current"].items():
+        value = "I_" + Cir.name_by_id(id)
+        quantities.append(value)
+
+
     #Generate expression other circuit quantities
     quant_expr = []
     for idx in range(X.number_of_nodes-1):
@@ -59,7 +78,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
     ## replace names in both expr with this->components.name to adapt to template.hpp
     for n1 ,n2 , data in Cir.G.edges(data=True):
         element = data["element"]
-        if element in X.state_vector["sources"]:
+        if element in X.state_vector["sources"] or element in X.state_vector["ctrl_sources"]:
             continue
 
         name = element.name
@@ -87,6 +106,28 @@ def compile2cpp(Circuit, circuit_name, output_file):
             quant_expr[i] = quant_expr[i].split("=")[0] + "=" + re.sub(str(name) + r'(?!(\w+))', 'sources.' + str(name), quant_expr[i].split("=")[1], flags=re.IGNORECASE)
 
 
+    #Fill ctrl_sources struct
+    ctrl_sources = []
+    for n1 ,n2 , data in Cir.G.edges(data=True):
+        element = data["element"]
+        if element not in X.state_vector["ctrl_sources"]:
+            continue
+
+        name = element.name
+
+        expr = element.expression
+        for i, quant in enumerate(quantities):  
+            expr = re.sub( str(quant) + r'(?!(\w+))', 'quants.' + str(quant), expr, flags=re.IGNORECASE)
+
+        ctrl_sources.append([name, element.value, expr])
+
+        for i, expr in enumerate(dt_expr): 
+            dt_expr[i] = re.sub( str(name) + r'(?!(\w+))', 'ctrl_sources.' + str(name), expr, flags=re.IGNORECASE)
+
+        for i, expr in enumerate(quant_expr): #Did this because I could not figure out a regex which starts after =
+            quant_expr[i] = quant_expr[i].split("=")[0] + "=" + re.sub(str(name) + r'(?!(\w+))', 'ctrl_sources.' + str(name), quant_expr[i].split("=")[1], flags=re.IGNORECASE)
+
+
 
     #Fill components struct with std_values
     components = []
@@ -97,17 +138,10 @@ def compile2cpp(Circuit, circuit_name, output_file):
         components.append([name, value])
 
 
-    #Fill quantities struct with std_values
-    quantities = []
-    for n in range(X.number_of_nodes-1):
-        value = "V_" + str(n+1)
-        quantities.append(value)
-
-    for id, idx in X.state_vector["current"].items():
-        value = "I_" + Cir.name_by_id(id)
-        quantities.append(value)
 
 
+
+    
 
     import os 
     from os.path import relpath
@@ -125,18 +159,36 @@ def compile2cpp(Circuit, circuit_name, output_file):
         autoescape=select_autoescape(['c++'])
     )
 
-    #template = env.get_template(dir_path + '/circuit_template.hpp')
-    template = env.get_template('circuit_template.hpp')
 
-    circuit_name = circuit_name
-    output = template.render(
-        circuit_desc = Cir.to_netlist(),
-        circuit_name=circuit_name, 
-        exprs = dt_expr, 
-        Sources = sources,
-        quant_expr = quant_expr,
-        Quantities = quantities,
-        Components=components)
+
+    if not ctrl_sources:
+
+        #template = env.get_template(dir_path + '/circuit_template.hpp')
+        template = env.get_template('circuit_template.hpp')
+
+        circuit_name = circuit_name
+        output = template.render(
+            circuit_desc = Cir.to_netlist(),
+            circuit_name=circuit_name, 
+            exprs = dt_expr, 
+            Sources = sources,
+            quant_expr = quant_expr,
+            Quantities = quantities,
+            Components=components)
+
+    else:
+        template = env.get_template('circuit_template_ctrl_sources.hpp')
+
+        circuit_name = circuit_name
+        output = template.render(
+            circuit_desc = Cir.to_netlist(),
+            circuit_name=circuit_name, 
+            exprs = dt_expr, 
+            Sources = sources,
+            Ctrl_Sources = ctrl_sources,
+            quant_expr = quant_expr,
+            Quantities = quantities,
+            Components=components)
 
     output_file.write(output)
 

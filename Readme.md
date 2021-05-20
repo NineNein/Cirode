@@ -51,8 +51,8 @@ Values in brackets (x) are fixed, and wont be added if an other matrix stamp is 
 | l  |   |   | 1  |    |    |
 | k  |   |   | -1 |    |    |
 | br |   |   | 1  | C  | -C |
-| dl | (1) |   |    |    |    |
-| dk |   | (1) |    |    |    |
+| dl |(1)|   |    |    |    |
+| dk |   |(1)|    |    |    |
 
 
 ## Indcutor Stamp
@@ -63,3 +63,7 @@ Values in brackets (x) are fixed, and wont be added if an other matrix stamp is 
 | k  |   |    | -1  |    |
 | br | 1 | -1 |     | L  |
 | di |   |    | (1) |    |
+
+
+http://www.ecircuitcenter.com/SpiceTopics/Non-Linear%20Analysis/Non-Linear%20Analysis.htm
+http://qucs.sourceforge.net/tech/node16.html

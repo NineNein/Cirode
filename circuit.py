@@ -78,6 +78,7 @@ class state_vector:
             "current" : {},  #id of element, idx in the state vector
             "dt" : {}, #idx of related variabeel, idx in the state vector
             "sources" : [], #list of sources
+            "ctrl_sources" : [], #list of controled sources
         }
 
     def _idx(self):
@@ -120,6 +121,21 @@ class OnePortElement(object):
     def __init__(self, name, nodes, value):
         global element_id_counter
         assert len(nodes) == 2, "One Port Element needs two nodes"
+        self.name = name
+        self.nodes = nodes
+        self.value = value
+
+        self.id = element_id_counter
+        element_id_counter += 1
+
+    def stamp(self, state_vector,  Y, RHS):
+        pass
+
+
+class TwoPortElement(object):
+    def __init__(self, name, nodes, value):
+        global element_id_counter
+        assert len(nodes) == 4, "Two Port Element needs four nodes"
         self.name = name
         self.nodes = nodes
         self.value = value
@@ -262,10 +278,42 @@ class L(OnePortElement):
         RHS[br_idx] = 0.0
 
 
+"""
+Class for a Voltage Source, contains netlist command creation and the stamp for a Voltage Source
+"""
+class VS(OnePortElement): #Voltage Source
+    def __init__(self, name, nodes, value):
+        super().__init__(name, nodes, value)
 
-# class VS(OnePortElement): #Votlage Source
-#     def __init__(self, nodes, value):
-#         super().__init__(nodes, value)
+    def netlist_cmd(self):
+        name = self.name.upper()
+        if not name.startswith("V"):
+            name = "V" + name
+
+        return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
+
+    def stamp(self, state_vector, Y, RHS, symbolic=True):
+        k = self.nodes[0]-1
+        l = self.nodes[1]-1
+
+        state_vector.state_vector["sources"].append(self)
+
+        br_idx = state_vector.add_current(self.id)
+
+        if symbolic:
+            value = sy.Symbol(self.name)
+        else:
+            value = self.value
+
+        if k >= 0:
+            Y[k][br_idx] += 1
+            Y[br_idx][k] += 1
+        
+        if l >= 0:
+            Y[l][br_idx] += -1
+            Y[br_idx][l] += -1
+
+        RHS[br_idx] = value
 
 """
 Class for a Current Source, contains netlist command creation and the stamp for a Current Source
@@ -291,6 +339,34 @@ class IS(OnePortElement): #Current Source
             value = sy.Symbol(self.name)
         else:
             value = self.value
+
+        RHS[k] = -value
+        RHS[l] = value
+
+"""
+Class for a Controled Current Source, contains netlist command creation and the stamp for a Controled Current Source
+"""
+class CTRL_CS(OnePortElement): #  Controled Current Source
+    def __init__(self, name, nodes, expression, start_value):
+        super().__init__(name, nodes, start_value)
+        self.expression = expression
+
+    def netlist_cmd(self):
+        name = self.name.upper()
+        if not name.startswith("G"):
+            name = "G" + name
+
+        return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
+
+    def stamp(self, state_vector, Y, RHS, symbolic=True):
+        k = self.nodes[0]-1
+        l = self.nodes[1]-1
+
+        state_vector.state_vector["ctrl_sources"].append(self)
+
+        assert symbolic, "VCCS can't be used yet in non symbolic mode"
+
+        value = sy.Symbol(self.name)
 
         RHS[k] = -value
         RHS[l] = value
