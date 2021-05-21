@@ -53,7 +53,7 @@ int main(int /* argc */ , char** /* argv */ )
 
     //[ state_initialization
     state_type x(1);
-    x[0] = 1.0; 
+    x[0] = 0.0; 
     //]
 
     ofstream out("diode_data.bin", ios::out | ios::binary);
