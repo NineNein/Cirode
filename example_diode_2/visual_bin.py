@@ -1,7 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+# V_2 = 0
+# V_3 = -10
 
+# b = 1e-15*(np.exp((V_2-V_3)/0.025875))
+
+# print(b)
+
+# exit()
 
 print("Read data")
 data = np.fromfile('diode_data.bin', dtype=np.double)

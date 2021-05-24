@@ -2,6 +2,9 @@
 - controlled sources can be used to implement diodes
 - uses GSL libary to find roots
 
+- static ctrl diodes still bugy
+- need to check sign convention...
+
 
 # Integrator Independent MNA Circuit Simulator
 The aim of this project is to create a tool which can compile a circuit into a system of first
