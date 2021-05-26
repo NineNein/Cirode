@@ -6,9 +6,9 @@ netlist: netlist.txt
 # 	python3 ../cirode.py netlist.txt diode_circuit
 # 	g++ -o ode boost_ode_lrc.cpp
 
-diode: iteration.cpp
-	g++ -o diode iteration.cpp -lgsl -lgslcblas -lm
-	./diode
+# diode: iteration.cpp
+# 	g++ -o diode iteration.cpp -lgsl -lgslcblas -lm
+# 	./diode
 
-gsl_test: gsltest.cpp
-	g++ -o gsl gsltest.cpp  -lgsl -lgslcblas -lm
+diode: boost_ode_diode.cpp diode_circuit.hpp
+	g++ -o diode boost_ode_diode.cpp  -lgsl -lgslcblas -lm

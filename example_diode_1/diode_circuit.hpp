@@ -1,6 +1,7 @@
 #include <vector>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_multiroots.h>
+#include <iostream>
 
 typedef std::vector< double > state_type;
 
@@ -90,8 +91,11 @@ namespace diode_circuit
 
 
         Ctrl_Sources get_ctrl_sources(
+            
+            
             const state_type &x
-            ,const Sources sources
+            ,
+            const Sources sources
             ){
             const gsl_multiroot_fsolver_type *T;
             gsl_multiroot_fsolver *s;
@@ -102,8 +106,11 @@ namespace diode_circuit
 
             struct r_params p{
                 this,
+                
+                
                 x
-                ,sources
+                ,
+                sources
                 };
 
             gsl_multiroot_function f = {&root_finding, n, &p};
@@ -125,6 +132,7 @@ namespace diode_circuit
             status = gsl_multiroot_fsolver_iterate (s);
 
             if (status){   /* check if solver is stuck */
+                std::cout<<"solver is stuck"<<std::endl;
                 break;
             }
 
@@ -153,13 +161,19 @@ namespace diode_circuit
         diode_circuit(Components components) : components(components) { }
 
         Quantities quantities(
+            
+            
             const state_type &x
-            ,const Sources sources
+            ,
+            const Sources sources
             ){
             Quantities quants;
             Ctrl_Sources ctrl_sources = this->get_ctrl_sources(
+                
+                
                 x
-                ,sources
+                ,
+                sources
                 );
 
             quants.V_1 = sources.V1;

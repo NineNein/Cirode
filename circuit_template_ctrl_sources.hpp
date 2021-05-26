@@ -1,6 +1,7 @@
 #include <vector>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_multiroots.h>
+#include <iostream>
 
 typedef std::vector< double > state_type;
 
@@ -87,11 +88,12 @@ namespace {{circuit_name}}
 
 
         Ctrl_Sources get_ctrl_sources(
-            {% if exprs is defined and exprs[0] is defined -%}
+            {% set comma = joiner(",") %}
+            {% if exprs is defined and exprs[0] is defined -%} {{comma()}}
             const state_type &x
             {% endif -%}
-            {% if Sources is defined and Sources[0] is defined -%}
-            ,const Sources sources
+            {% if Sources is defined and Sources[0] is defined -%} {{comma()}}
+            const Sources sources
             {% endif -%}
         ){
             const gsl_multiroot_fsolver_type *T;
@@ -103,11 +105,12 @@ namespace {{circuit_name}}
 
             struct r_params p{
                 this,
-                {% if exprs is defined and exprs[0] is defined -%}
+                {% set comma = joiner(",") %}
+                {% if exprs is defined and exprs[0] is defined -%} {{comma()}}
                 x
                 {% endif -%}
-                {% if Sources is defined and Sources[0] is defined -%}
-                ,sources
+                {% if Sources is defined and Sources[0] is defined -%} {{comma()}}
+                sources
                 {% endif -%}
             };
 
@@ -121,7 +124,10 @@ namespace {{circuit_name}}
             {% endfor %}
             
 
-            T = gsl_multiroot_fsolver_hybrids;
+            //T = gsl_multiroot_fsolver_hybrids;
+            //T = gsl_multiroot_fsolver_hybrid;
+            //T = gsl_multiroot_fsolver_broyden;
+            T = gsl_multiroot_fsolver_dnewton;
             s = gsl_multiroot_fsolver_alloc (T, n);
             gsl_multiroot_fsolver_set (s, &f, xs);
 
@@ -131,6 +137,7 @@ namespace {{circuit_name}}
             status = gsl_multiroot_fsolver_iterate (s);
 
             if (status){   /* check if solver is stuck */
+                std::cout<<"solver is stuck"<<std::endl;
                 break;
             }
 
@@ -160,20 +167,22 @@ namespace {{circuit_name}}
         {{circuit_name}}(Components components) : components(components) { }
 
         Quantities quantities(
-            {% if exprs is defined and exprs[0] is defined -%}
+            {% set comma = joiner(",") %}
+            {% if exprs is defined and exprs[0] is defined -%} {{comma()}}
             const state_type &x
             {% endif -%}
-            {% if Sources is defined and Sources[0] is defined -%}
-            ,const Sources sources
+            {% if Sources is defined and Sources[0] is defined -%} {{comma()}}
+            const Sources sources
             {% endif -%}
         ){
             Quantities quants;
             Ctrl_Sources ctrl_sources = this->get_ctrl_sources(
-                {% if exprs is defined and exprs[0] is defined -%}
+                {% set comma = joiner(",") %}
+                {% if exprs is defined and exprs[0] is defined -%} {{comma()}}
                 x
                 {% endif -%}
-                {% if Sources is defined and Sources[0] is defined -%}
-                ,sources
+                {% if Sources is defined and Sources[0] is defined -%} {{comma()}}
+                sources
                 {% endif -%}
             );
 
