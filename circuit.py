@@ -372,6 +372,60 @@ class CTRL_CS(OnePortElement): #  Controled Current Source
         RHS[l] = value
 
 """
+Class for a Diode, creates diode with an series resistor and a controlled current source
+"""
+
+class model:
+    def __init__(self):
+        pass
+
+class diode_model(model):
+    def __init__(self, name, IS=1e-14, UT = 0.025875, RS = 1e-10, CJO = 0, TT=0, BV=None, IBV=1e-10):
+        """
+        - name is the name of the model of the diode specified in the model line.
+        - IS: saturation current,
+        - UT: thermal voltage
+        - RS: the series resistance, should not be zero because thise could lead to non possible root finding
+        - CJO - junction capacitance , NOT CURRENTLY IMPLEMENTED
+        - TT - transit time , NOT CURRENTLY IMPLEMENTED
+        - BV - reverse bias breakdown voltage, None = Inf , NOT CURRENTLY IMPLEMENTED
+        - IBV - the reverse bias breakdown current, NOT CURRENTLY IMPLEMENTED
+        """
+        self.name = name
+        self.IS = IS
+        self.UT = UT
+        self.RS = RS
+        self.CJO = CJO
+        self.TT = TT
+        self.BV = BV
+        self.IBV = IBV
+
+
+class Diode(OnePortElement): #  Controled Current Source
+    def __init__(self, name, nodes, model):
+        super().__init__(name, nodes, model.bandgap)
+        self.model = model
+       
+    def netlist_cmd(self):
+        name = self.name.upper()
+        if not name.startswith("D"):
+            name = "D" + name
+
+        return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1])
+
+    def stamp(self, state_vector, Y, RHS, symbolic=True):
+        expression = f"{self.model.IS}*(exp((V_{self.node[0]}-V_{self.node[1]})/({self.model.UT})) - 1)"
+
+        ctrl_cs = CTRL_CS(self.name + "_ctrl_cs", self.nodes, expression, 0.6)
+        resistor = R(self.name + "_R", self.nodes, self.model.RS)
+
+        ctrl_cs.stamp(state_vector, Y, RHS, symbolic=symbolic)
+        resistor.stamp(state_vector, Y, RHS, symbolic=symbolic)
+
+
+
+
+"""
 Main Circuit class which holds the definition of the Circuit and compiles circuit to matricies
 """
 class Circuit():

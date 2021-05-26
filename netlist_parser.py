@@ -11,13 +11,15 @@ Iname N+ N- VALUE
 
 import circuit
 from circuit import Circuit
+import re
+import string
 
 def oneport(line, namelist):
     #line = line.lower()
     words = line.split()
 
     if len(words) < 3:
-        return False
+        return False, None, None
 
     node_number = []
     for w in words[1:3]:
@@ -28,10 +30,13 @@ def oneport(line, namelist):
                 namelist.append(w)
             node_number.append(namelist.index(w))
 
-    return words, node_number
+    return True, words, node_number
 
 def resistor(line, component_list, namelist):
-    words, nodes = oneport(line, namelist)
+    success, words, nodes = oneport(line, namelist)
+
+    if not success:
+        return False
 
     if words[0][0].lower() != "r":
         return False
@@ -45,7 +50,10 @@ def resistor(line, component_list, namelist):
 
 
 def inductor(line, component_list, namelist):
-    words, nodes = oneport(line, namelist)
+    success, words, nodes = oneport(line, namelist)
+
+    if not success:
+        return False
 
     if words[0][0].lower() != "l":
         return False
@@ -59,7 +67,10 @@ def inductor(line, component_list, namelist):
 
 
 def capacitor(line, component_list, namelist):
-    words, nodes = oneport(line, namelist)
+    success, words, nodes = oneport(line, namelist)
+
+    if not success:
+        return False
 
     if words[0][0].lower() != "c":
         return False
@@ -72,7 +83,10 @@ def capacitor(line, component_list, namelist):
     return True
 
 def current_source(line, component_list, namelist):
-    words, nodes = oneport(line, namelist)
+    success, words, nodes = oneport(line, namelist)
+
+    if not success:
+        return False
 
     if words[0][0].lower() != "i":
         return False
@@ -85,7 +99,10 @@ def current_source(line, component_list, namelist):
     return True
 
 def votlage_source(line, component_list, namelist):
-    words, nodes = oneport(line, namelist)
+    success, words, nodes = oneport(line, namelist)
+
+    if not success:
+        return False
 
     if words[0][0].lower() != "v":
         return False
@@ -98,7 +115,10 @@ def votlage_source(line, component_list, namelist):
     return True
 
 def ctrl_current_source(line, component_list, namelist):
-    words, nodes = oneport(line, namelist)
+    success, words, nodes = oneport(line, namelist)
+
+    if not success:
+        return False
 
     if words[0][0].lower() != "g":
         return False
@@ -116,6 +136,50 @@ def ctrl_current_source(line, component_list, namelist):
 
     return True
 
+
+### Model Section
+
+def diode_model(name, model, params):
+    if model.upper() != "D":
+        return False
+    
+    return True
+
+models = [
+    diode_model
+]
+
+def model(line, variable, namelist):
+    re_model = re.compile(r".model\s\s*(\w+)\s\s*(\w+)\s*\((.*?)\)")
+    output = re_model.match(line)
+    if not output:
+        return False
+
+    name  = output.group(1)
+    model = output.group(2)
+    str_params = output.group(3)
+    str_params = str_params.lstrip().split(",")
+
+    params = {}
+    for param in str_params:
+        key, value = param.split("=")
+        key = key.translate(str.maketrans('', '', string.whitespace))
+        value = value.translate(str.maketrans('', '', string.whitespace))
+        params[key] = float(value)
+
+    for m in models:
+        if m(name, model, params):
+            break
+    
+    
+    return False
+    
+    
+instructions = [
+    model
+]
+
+
 components = [
     resistor,
     inductor,
@@ -130,19 +194,38 @@ def parse_netlist(netlist_io):
 
     namelist = ["GND"]
 
+    lines = []
     for line in netlist_io:
         if line.lstrip().startswith("#") or line.isspace():
             continue
 
         line = line.split("#")[0]
+        lines.append(line)
 
-        found = False
+    parsed_lines = []
+
+    #instructions
+    for j, line in enumerate(lines):
+        for instruction in instructions:
+            if instruction(line, component_list, namelist):
+                parsed_lines.append(j)
+                break
+
+
+    #Components
+    for j, line in enumerate(lines):
         for component in components:
             if component(line, component_list, namelist):
-                found = True
+                parsed_lines.append(j)
                 break
-        if not found:
-            raise ValueError("Not Component found for: " + line)
-        
+
+
+
+    line_nrs = set(range(len(lines))) 
+    parsed_lines = set(parsed_lines)
+
+    missing = list(sorted(line_nrs - parsed_lines))
+    if len(missing) != 0:
+        raise ValueError("Cant parse line(s): " + str(missing))
 
     return component_list
