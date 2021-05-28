@@ -32,7 +32,7 @@ def oneport(line, namelist):
 
     return True, words, node_number
 
-def resistor(line, component_list, namelist):
+def resistor(line, component_list, namelist, model_list):
     success, words, nodes = oneport(line, namelist)
 
     if not success:
@@ -49,7 +49,7 @@ def resistor(line, component_list, namelist):
     return True
 
 
-def inductor(line, component_list, namelist):
+def inductor(line, component_list, namelist, model_list):
     success, words, nodes = oneport(line, namelist)
 
     if not success:
@@ -66,7 +66,7 @@ def inductor(line, component_list, namelist):
     return True
 
 
-def capacitor(line, component_list, namelist):
+def capacitor(line, component_list, namelist, model_list):
     success, words, nodes = oneport(line, namelist)
 
     if not success:
@@ -82,7 +82,7 @@ def capacitor(line, component_list, namelist):
 
     return True
 
-def current_source(line, component_list, namelist):
+def current_source(line, component_list, namelist, model_list):
     success, words, nodes = oneport(line, namelist)
 
     if not success:
@@ -98,7 +98,7 @@ def current_source(line, component_list, namelist):
 
     return True
 
-def votlage_source(line, component_list, namelist):
+def votlage_source(line, component_list, namelist, model_list):
     success, words, nodes = oneport(line, namelist)
 
     if not success:
@@ -114,7 +114,7 @@ def votlage_source(line, component_list, namelist):
 
     return True
 
-def ctrl_current_source(line, component_list, namelist):
+def ctrl_current_source(line, component_list, namelist, model_list):
     success, words, nodes = oneport(line, namelist)
 
     if not success:
@@ -136,20 +136,41 @@ def ctrl_current_source(line, component_list, namelist):
 
     return True
 
+def diode(line, component_list, namelist, model_list):
+    success, words, nodes = oneport(line, namelist)
+
+    if not success:
+        return False
+
+    if words[0][0].lower() != "d":
+        return False
+
+    name = words[0].upper()
+
+    model_name = words[3]
+
+    for model in model_list:
+        if model.name == model_name:
+            break
+        
+    component_list.append(circuit.Diode(name, nodes , model))
+
+    return True
+
 
 ### Model Section
 
-def diode_model(name, model, params):
+def diode_model(name, model, params, model_list):
     if model.upper() != "D":
         return False
-    
+    model_list.append(circuit.diode_model(name, **params))
     return True
 
 models = [
     diode_model
 ]
 
-def model(line, variable, namelist):
+def model(line, model_list):
     re_model = re.compile(r".model\s\s*(\w+)\s\s*(\w+)\s*\((.*?)\)")
     output = re_model.match(line)
     if not output:
@@ -168,8 +189,8 @@ def model(line, variable, namelist):
         params[key] = float(value)
 
     for m in models:
-        if m(name, model, params):
-            break
+        if m(name, model, params, model_list):
+            return True
     
     
     return False
@@ -187,10 +208,12 @@ components = [
     current_source,
     votlage_source,
     ctrl_current_source,
+    diode
 ]
 
 def parse_netlist(netlist_io):
     component_list = []
+    model_list = []
 
     namelist = ["GND"]
 
@@ -207,7 +230,7 @@ def parse_netlist(netlist_io):
     #instructions
     for j, line in enumerate(lines):
         for instruction in instructions:
-            if instruction(line, component_list, namelist):
+            if instruction(line, model_list):
                 parsed_lines.append(j)
                 break
 
@@ -215,7 +238,7 @@ def parse_netlist(netlist_io):
     #Components
     for j, line in enumerate(lines):
         for component in components:
-            if component(line, component_list, namelist):
+            if component(line, component_list, namelist, model_list):
                 parsed_lines.append(j)
                 break
 

@@ -53,7 +53,7 @@ x2 = data[:,3]
 
 
 plt.plot(t, x0, label="Node 2 Voltage")
-#plt.plot(t, x1, label="Node 2 Voltage")
+plt.plot(t, x1, label="Node 2 Voltage")
 plt.plot(t, x2, label="Node 2 Voltage")
 
 

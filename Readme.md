@@ -5,6 +5,11 @@
 - static ctrl diodes still bugy
 - need to check sign convention...
 
+### subcircuts
+- implementation of subcircuit
+- if subcircuit can have parameters which can be specifed by a model command
+it would be possible to define diodes and transitors this way
+
 
 # Integrator Independent MNA Circuit Simulator
 The aim of this project is to create a tool which can compile a circuit into a system of first
@@ -75,3 +80,8 @@ Values in brackets (x) are fixed, and wont be added if an other matrix stamp is 
 
 http://www.ecircuitcenter.com/SpiceTopics/Non-Linear%20Analysis/Non-Linear%20Analysis.htm
 http://qucs.sourceforge.net/tech/node16.html
+
+
+#install libs
+sudo apt-get install libboost-all-dev
+sudo apt-get install libgsl-dev

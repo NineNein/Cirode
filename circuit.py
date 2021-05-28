@@ -116,19 +116,24 @@ class state_vector:
 Base class for OnePortElement
 it will count automaticly element_id_counter up and such gives every element an unique ID
 """
+
+class ComposedElement(object):
+    def __init__(self):
+        pass
+
 element_id_counter = 0
 class OnePortElement(object):
     def __init__(self, name, nodes, value):
         global element_id_counter
         assert len(nodes) == 2, "One Port Element needs two nodes"
         self.name = name
-        self.nodes = nodes
+        self.nodes = list(map(str,nodes))
         self.value = value
 
         self.id = element_id_counter
         element_id_counter += 1
 
-    def stamp(self, state_vector,  Y, RHS):
+    def stamp(self, state_vector,  Y, RHS, name2node, symbolic=True):
         pass
 
 
@@ -137,13 +142,13 @@ class TwoPortElement(object):
         global element_id_counter
         assert len(nodes) == 4, "Two Port Element needs four nodes"
         self.name = name
-        self.nodes = nodes
+        self.nodes = list(map(str,nodes))
         self.value = value
 
         self.id = element_id_counter
         element_id_counter += 1
 
-    def stamp(self, state_vector,  Y, RHS):
+    def stamp(self, state_vector,  Y, RHS, name2node, symbolic=True):
         pass
 
 
@@ -163,9 +168,9 @@ class R(OnePortElement):
         return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
 
 
-    def stamp(self, state_vector,  Y, RHS, symbolic=True):
-        k = self.nodes[0]-1
-        l = self.nodes[1]-1
+    def stamp(self, state_vector,  Y, RHS, name2node, symbolic=True):
+        k = name2node[self.nodes[0]]-1
+        l = name2node[self.nodes[1]]-1
 
         if symbolic:
             value = sy.Symbol(self.name)
@@ -200,9 +205,9 @@ class C(OnePortElement):
 
         return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
 
-    def stamp(self, state_vector, Y, RHS, symbolic=True):
-        k = self.nodes[0]-1
-        l = self.nodes[1]-1
+    def stamp(self, state_vector, Y, RHS, name2node, symbolic=True):
+        k = name2node[self.nodes[0]]-1
+        l = name2node[self.nodes[1]]-1
 
         br_idx = state_vector.add_current(self.id)
 
@@ -249,9 +254,9 @@ class L(OnePortElement):
 
         return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
 
-    def stamp(self, state_vector, Y, RHS, symbolic=True):
-        k = self.nodes[0]-1
-        l = self.nodes[1]-1
+    def stamp(self, state_vector, Y, RHS, name2node, symbolic=True):
+        k = name2node[self.nodes[0]]-1
+        l = name2node[self.nodes[1]]-1
 
         br_idx = state_vector.add_current(self.id)
 
@@ -292,9 +297,9 @@ class VS(OnePortElement): #Voltage Source
 
         return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
 
-    def stamp(self, state_vector, Y, RHS, symbolic=True):
-        k = self.nodes[0]-1
-        l = self.nodes[1]-1
+    def stamp(self, state_vector, Y, RHS, name2node, symbolic=True):
+        k = name2node[self.nodes[0]]-1
+        l = name2node[self.nodes[1]]-1
 
         state_vector.state_vector["sources"].append(self)
 
@@ -329,9 +334,9 @@ class IS(OnePortElement): #Current Source
 
         return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
 
-    def stamp(self, state_vector, Y, RHS, symbolic=True):
-        k = self.nodes[0]-1
-        l = self.nodes[1]-1
+    def stamp(self, state_vector, Y, RHS, name2node, symbolic=True):
+        k = name2node[self.nodes[0]]-1
+        l = name2node[self.nodes[1]]-1
 
         state_vector.state_vector["sources"].append(self)
 
@@ -358,9 +363,9 @@ class CTRL_CS(OnePortElement): #  Controled Current Source
 
         return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
 
-    def stamp(self, state_vector, Y, RHS, symbolic=True):
-        k = self.nodes[0]-1
-        l = self.nodes[1]-1
+    def stamp(self, state_vector, Y, RHS, name2node, symbolic=True):
+        k = name2node[self.nodes[0]]-1
+        l = name2node[self.nodes[1]]-1
 
         state_vector.state_vector["ctrl_sources"].append(self)
 
@@ -399,13 +404,39 @@ class diode_model(model):
         self.TT = TT
         self.BV = BV
         self.IBV = IBV
+        self.bandgap = 0.6
 
 
-class Diode(OnePortElement): #  Controled Current Source
+class Diode(OnePortElement, ComposedElement): #  Controled Current Source
     def __init__(self, name, nodes, model):
         super().__init__(name, nodes, model.bandgap)
         self.model = model
+
        
+    def compose(self, circuit):
+
+        print("compose")
+
+        #n0 = circuit.name2node[self.nodes[0]]
+        #n1 = circuit.name2node[self.nodes[1]]
+        
+
+        if self.model.RS != 0:
+            between_node = circuit.generate_free_node()
+            #expression = f"{self.model.IS}*(exp((V({self.nodes[1]})-V({between_node}))/({self.model.UT})) - 1)"
+            expression = f"{self.model.IS}*(exp((V({between_node})-V({self.nodes[1]}))/({self.model.UT})) - 1)"
+            self.resistor = R("RS" + self.name, [self.nodes[0], between_node], self.model.RS)
+            self.ctrl_cs = CTRL_CS(self.name + "_ctrl_cs", [self.nodes[1], between_node], expression, 0.6)
+            
+            circuit.add_element(self.resistor)
+        else:
+            expression = f"{self.model.IS}*(exp((V({self.nodes[1]})-V({self.nodes[0]}))/({self.model.UT})) - 1)"
+            self.ctrl_cs = CTRL_CS(self.name + "_ctrl_cs", self.nodes, expression, 0.6)
+        
+        circuit.add_element(self.ctrl_cs)
+
+
+
     def netlist_cmd(self):
         name = self.name.upper()
         if not name.startswith("D"):
@@ -414,13 +445,7 @@ class Diode(OnePortElement): #  Controled Current Source
         return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1])
 
     def stamp(self, state_vector, Y, RHS, symbolic=True):
-        expression = f"{self.model.IS}*(exp((V_{self.node[0]}-V_{self.node[1]})/({self.model.UT})) - 1)"
-
-        ctrl_cs = CTRL_CS(self.name + "_ctrl_cs", self.nodes, expression, 0.6)
-        resistor = R(self.name + "_R", self.nodes, self.model.RS)
-
-        ctrl_cs.stamp(state_vector, Y, RHS, symbolic=symbolic)
-        resistor.stamp(state_vector, Y, RHS, symbolic=symbolic)
+        print("stamp")
 
 
 
@@ -432,10 +457,54 @@ class Circuit():
     def __init__(self, ref_node):
         self.G = nx.MultiGraph()
         self.ref_node = ref_node
+        self.name2node = {} #0 as reserved as GND
 
+    def add_element(self, element):
+        self.G.add_edges_from([(*element.nodes, {'element': element})])
+
+    def generate_free_node(self):
+        used_node_nrs = []
+        
+        for node_name in self.name2node.keys():
+            try:
+                node_nr = int(node_name)
+                used_node_nrs.append(node_nr)
+            except:
+                continue
+
+        #must be not super efficient jet: get the smalest number which is not in list
+        for i in range(len(used_node_nrs)+1):
+            if i not in used_node_nrs:
+                self.name2node[str(i)] = max(self.name2node.values())+1
+                return str(i)
+            
     def define(self, elements):
+
+        #The program currenly wants nodes which have no gaps
+        # if there is nodes 1 and 3 in the circuit, its not valid since 2 are missing
+
+        # Get all nodes
+        name_nodes = [str(self.ref_node)] #Ref node is 0
         for i, element in enumerate(elements):
-            self.G.add_edges_from([(*element.nodes, {'element': element})])
+            for node in element.nodes:
+                if not node in name_nodes:
+                    name_nodes.append(str(node))
+
+        print(name_nodes)
+
+        #assing a ascending number to it
+        for i, name_node in enumerate(name_nodes):
+            self.name2node[name_node] = i
+
+        print(self.name2node)
+        
+        #add elements to graph
+        for i, element in enumerate(elements):
+            if issubclass(type(element), ComposedElement):
+                element.compose(self)
+            else:
+                #self.G.add_edges_from([(*element.nodes, {'element': element})])
+                self.add_element(element)
 
     def name_by_id(self, id):
         for n1 ,n2 , data in self.G.edges(data=True):
@@ -466,7 +535,7 @@ class Circuit():
         ## Add Stamp to Matrices
         for n1 ,n2 , data in self.G.edges(data=True):
             element = data["element"]
-            element.stamp(X, Y, RHS, symbolic=symbolic)
+            element.stamp(X, Y, RHS, self.name2node, symbolic=symbolic)
 
         if len(RHS.to_list()) != X._idx()+1:
             RHS[X._idx()] = 0.0

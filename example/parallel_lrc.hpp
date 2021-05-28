@@ -59,6 +59,6 @@ namespace parallel_lrc
             dxdt[1]=x[0]/this->components.L1;
             
         }
-    };
+        };
 
 }

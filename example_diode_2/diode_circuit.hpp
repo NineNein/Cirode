@@ -98,11 +98,11 @@ namespace diode_circuit
             const Ctrl_Sources ctrl_sources
             ){
             Quantities quants;
-            quants.V_1 = -ctrl_sources.G1*this->components.R5 + sources.V1;
-            quants.V_2 = x[0];
-            quants.V_3 = x[1];
+            quants.V_1 = sources.V1;
+            quants.V_2 = -ctrl_sources.G1*this->components.R5 + sources.V1;
+            quants.V_3 = x[0];
             quants.V_4 = -ctrl_sources.G2*this->components.R6 + x[0];
-            quants.V_5 = sources.V1;
+            quants.V_5 = x[1];
             quants.I_V1 = ctrl_sources.G1;
             quants.I_R5 = ctrl_sources.G1;
             quants.I_C2 = ctrl_sources.G1 - ctrl_sources.G2 - x[0]/this->components.R2;
@@ -206,11 +206,11 @@ namespace diode_circuit
                 sources
                 );
 
-            quants.V_1 = -ctrl_sources.G1*this->components.R5 + sources.V1;
-            quants.V_2 = x[0];
-            quants.V_3 = x[1];
+            quants.V_1 = sources.V1;
+            quants.V_2 = -ctrl_sources.G1*this->components.R5 + sources.V1;
+            quants.V_3 = x[0];
             quants.V_4 = -ctrl_sources.G2*this->components.R6 + x[0];
-            quants.V_5 = sources.V1;
+            quants.V_5 = x[1];
             quants.I_V1 = ctrl_sources.G1;
             quants.I_R5 = ctrl_sources.G1;
             quants.I_C2 = ctrl_sources.G1 - ctrl_sources.G2 - x[0]/this->components.R2;
@@ -263,10 +263,10 @@ namespace diode_circuit
 
 
         double I_0     = gsl_vector_get(xs, 0);
-        double Icalc_0 = 1e-15*(exp((quants.V_1-quants.V_2)/0.025875) - 1);
+        double Icalc_0 = 1e-15*(exp((quants.V_2-quants.V_3)/0.025875) - 1);
         gsl_vector_set (f, 0, I_0-Icalc_0);
         double I_1     = gsl_vector_get(xs, 1);
-        double Icalc_1 = 1e-15*(exp((quants.V_4-quants.V_3)/0.025875) - 1);
+        double Icalc_1 = 1e-15*(exp((quants.V_4-quants.V_5)/0.025875) - 1);
         gsl_vector_set (f, 1, I_1-Icalc_1);
         
 

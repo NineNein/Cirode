@@ -107,6 +107,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
 
 
     #Fill ctrl_sources struct
+    print(Cir.name2node)
     ctrl_sources = []
     for n1 ,n2 , data in Cir.G.edges(data=True):
         element = data["element"]
@@ -115,17 +116,37 @@ def compile2cpp(Circuit, circuit_name, output_file):
 
         name = element.name
 
-        expr = element.expression
-        for i, quant in enumerate(quantities):  
-            expr = re.sub( str(quant) + r'(?!(\w+))', 'quants.' + str(quant), expr, flags=re.IGNORECASE)
-
-        ctrl_sources.append([name, element.value, expr])
-
         for i, expr in enumerate(dt_expr): 
             dt_expr[i] = re.sub( str(name) + r'(?!(\w+))', 'ctrl_sources.' + str(name), expr, flags=re.IGNORECASE)
 
         for i, expr in enumerate(quant_expr): #Did this because I could not figure out a regex which starts after =
             quant_expr[i] = quant_expr[i].split("=")[0] + "=" + re.sub(str(name) + r'(?!(\w+))', 'ctrl_sources.' + str(name), quant_expr[i].split("=")[1], flags=re.IGNORECASE)
+
+
+        expr = element.expression
+
+        #re_model = re.compile(r"V\((.*?)\)")
+        output = re.findall(r"V\((.*?)\)", expr)
+        if not output:
+            continue
+
+        for match in output:
+            match_node = Cir.name2node[match]
+            print(expr)
+            expr = expr.replace("V("+str(match)+")", "quants.V_"+str(match_node))
+            print(expr)
+
+            
+        ctrl_sources.append([name, element.value, expr])
+
+        # expr = element.expression
+        # for i, quant in enumerate(quantities):  
+            
+        #     expr = re.sub( str(quant) + r'(?!(\w+))', 'quants.' + str(quant), expr, flags=re.IGNORECASE)
+
+        # ctrl_sources.append([name, element.value, expr])
+
+        
 
 
 

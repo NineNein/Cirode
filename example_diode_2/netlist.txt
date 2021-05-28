@@ -1,10 +1,12 @@
 V1 5 0 1
 R5 1 5 0.1 #nessary in this case otherwise the voltages don't depend in qunantities on the the current through diode
-G1 2 1 0.6 1e-15*(exp((V_1-V_2)/0.025875) - 1)
+#G1 2 1 0.6 1e-15*(exp((V_1-V_2)/0.025875) - 1)
+G1 2 1 0.6 1e-15*(exp((V(1)-V(2))/0.025875) - 1)
 C2 0 2 1e-5
 R2 0 2 1000
 R6 4 2 0.1 #nessary in this case otherwise the voltages don't depend in qunantities on the the current through diode
-G2 3 4 0.6 1e-15*(exp((V_4-V_3)/0.025875) - 1)
+#G2 3 4 0.6 1e-15*(exp((V_4-V_3)/0.025875) - 1)
+G2 3 4 0.6 1e-15*(exp((V(4)-V(3))/0.025875) - 1)
 R1 0 3 1000
 C1 0 3 1e-5
 
