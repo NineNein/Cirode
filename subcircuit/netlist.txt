@@ -1,0 +1,11 @@
+
+.SUBCKT  ACamplifier 2 1 3 PARAMS: Cin=10n Rbias=2K
+R1 1 4 {Rbias  * 1.12}
+R2 4 0 500
+C1 2 4 {Cin}
+.ENDS ACamplifier
+
+
+Xamp 5 4 2  ACamplifier PARAMS: Cin=20n Rbias=2.7K
+
+https://fdik.org/pyPEG/parser_engine.html

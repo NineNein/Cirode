@@ -447,7 +447,48 @@ class Diode(OnePortElement, ComposedElement): #  Controled Current Source
     def stamp(self, state_vector, Y, RHS, symbolic=True):
         print("stamp")
 
+class Parameter():
+    pass 
 
+class Expression():
+    pass
+
+class SubCircuit():
+    def __init__(self, export_nodes, parameter):
+        self.components = []
+        self.parameter = parameter
+
+    def define(self, elements):
+        pass
+
+    def __call__(self, name, nodes, parameter):
+        pass
+
+
+
+def test():
+    params = Parameter()
+    sc = SubCircuit([1,2,3], params)
+    sc.define([
+        R("R1", [1, 2], params.R1),
+        C("C1", [2, 3], params.C1),
+    ])
+
+    params = Parameter()
+    diode = SubCircuit([1,3], params)
+    expression = lambda param: f"{param.IS}*(exp((V(3)-V(2))/({param.UT})) - 1)"
+    sc.define([
+        R("R1", [1, 2], params.R1),
+        CTRL_CS("C1", [2, 3], expression), #CTRL source accept function or string
+    ])
+
+
+    c = Circuit(0)
+    model = {"R1":0.1, "C1": 1e-6}
+    c.define([
+        R("R1", [1, 2], 300),
+        sc("SC1", [1,2,0], model)
+    ])
 
 
 """
