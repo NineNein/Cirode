@@ -2,93 +2,109 @@ import networkx as nx
 import numpy as np
 import sympy as sy
 
-element_id_counter = 0
-class OnePortElement(object):
-    def __init__(self, name, nodes, value):
-        global element_id_counter
-        assert len(nodes) == 2, "One Port Element needs two nodes"
-        self.name = name
-        self.nodes = list(map(str,nodes))
-        self.value = value
-
-        self.id = element_id_counter
-        element_id_counter += 1
-
-    def stamp(self, state_vector,  Y, RHS, name2node, symbolic=True):
-        pass
+from elementary_components import *
 
 """
-Class for a Resistor, contains netlist command creation and the stamp for a resistor
+avector and amatrix are vector and matrix with arbitary size
+such it is easy to fill the MNA stamps without previous determination of the size
+of needed vector or matrix
 """
-class R(OnePortElement):
-    def __init__(self, name, nodes, value):
-        super().__init__(name, nodes, value)
+class avector:
+    def __init__(self, init_value = 0.0):
+        self.init_value = init_value
+        self.v = {}
+
+    def __getitem__(self, key):
+        return self.v.get(key, self.init_value)
+
+    def __setitem__(self, key, value):
+        self.v[key] = value
+
+    def to_list(self):
+        vm = max(list(self.v.keys()))+1
+        tlist = [ 0 for i in range(vm)]
+        for k, value in self.v.items():
+                tlist[k] = value
+
+        return tlist
+
+class amatrix:
+    def __init__(self, init_value = 0.0):
+        self.init_value = init_value
+        self.m = {}
+
+    def __getitem__(self, key):
+        if key not in self.m:
+            self.m[key] = avector(init_value = self.init_value)
+        return self.m[key]
+
+    def to_list(self):
+        n = max(list(self.m.keys()))
+
+        m = 0
+        for key, value in self.m.items():
+            vm = max(list(value.v.keys()))
+            if vm > m:
+                m = vm
+
+        n += 1
+        m += 1
+
+        tlist = [ [0]*m for i in range(n)]
+
+        for j, vector in self.m.items():
+            for k, value in vector.v.items():
+                tlist[j][k] = value
 
 
-    def netlist_cmd(self):
-        name = self.name.upper()
-        if not name.startswith("R"):
-            name = "R" + name
+        return tlist
 
-        return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
 
-    def replace(self, node_map, parameters):
-        pass
+"""
+State vector
+holds information about which entry/index are corresponding to which current or derivative
+the first n entries are the node voltages
+It also holds a list of used sources
+"""
 
-    def stamp(self, state_vector,  Y, RHS, name2node, symbolic=True):
-        k = name2node[self.nodes[0]]-1
-        l = name2node[self.nodes[1]]-1
+class state_vector:
+    def __init__(self, number_of_nodes):
+        self.number_of_nodes = number_of_nodes
+        self.state_vector = {
+            "current" : {},  #id of element, idx in the state vector
+            "dt" : {}, #idx of related variabeel, idx in the state vector
+            "sources" : [], #list of sources
+            "ctrl_sources" : [], #list of controled sources
+        }
 
-        if symbolic:
-            value = sy.Symbol(self.name)
+    def _idx(self):
+        i_values = list(self.state_vector["current"].values())
+        i_dt = list(self.state_vector["dt"].values())
+
+        if not i_dt and not i_values:
+            idx = self.number_of_nodes - 1 - 1 #GND dont count 
         else:
-            value = self.value
+            idx = max(i_values + i_dt)
 
-        br_idx = state_vector.add_current(self.id)
+        return idx
 
-        if k >= 0:
-            Y[k][br_idx] = 1
-            Y[br_idx][k] = 1
-            
-        if l >= 0:
-            Y[l][br_idx] = -1
-            Y[br_idx][l] = -1
-            
-        Y[br_idx][br_idx] = value
+    def add_current(self, id):
+        if id not in self.state_vector["current"]:
+            self.state_vector["current"][id] = self._idx()+1
 
-        RHS[br_idx] = 0
+        return self.state_vector["current"][id]
 
-"""
-Class for a Controled Current Source, contains netlist command creation and the stamp for a Controled Current Source
-"""
-class CTRL_CS(OnePortElement): #  Controled Current Source
-    def __init__(self, name, nodes, expression, start_value):
-        super().__init__(name, nodes, start_value)
-        self.expression = expression
+    def add_dt(self, var_idx):
+        if var_idx not in self.state_vector["dt"]:
+            self.state_vector["dt"][var_idx] = self._idx()+1
 
-    def netlist_cmd(self):
-        name = self.name.upper()
-        if not name.startswith("G"):
-            name = "G" + name
+        return self.state_vector["dt"][var_idx]
 
-        return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
+    def current(self, id):
+        return self.state_vector["current"].get(id, -1)
 
-    def stamp(self, state_vector, Y, RHS, name2node, symbolic=True):
-        k = name2node[self.nodes[0]]-1
-        l = name2node[self.nodes[1]]-1
-
-        state_vector.state_vector["ctrl_sources"].append(self)
-
-        assert symbolic, "VCCS can't be used yet in non symbolic mode"
-
-        value = sy.Symbol(self.name)
-
-        RHS[k] = -value
-        RHS[l] = value
-
-############################
-
-
+    def dt(self, var_idx):
+        return self.state_vector["dt"].get(var_idx, -1)
 
 '''
 Model could be represent by a struct in C++ code such,
@@ -102,23 +118,35 @@ class Parameter():
         self.value = value
 
 class Model():
-    def __init__(self, **kwargs):
+    def __init__(self, name, **kwargs):
+        print(kwargs)
         self.params = {}
+        self.name = name
         for name, value in kwargs.items():
             self.params[name] = Parameter(name, value)
 
+        
+
     def __getattr__(self, attr):
-        if attr  in self.params.keys():
+        if attr in self.params.keys():
             return self.params[attr].symbol
 
-        return self.__getattribute__(name)
+        
 
 
     def __setattr__(self, attr, value):
-        if attr in self.params.keys():
-            self.params[attr].value = value
+        if attr is not "params":
+            if attr in self.params.keys():
+                self.params[attr].value = value
 
         super().__setattr__(attr, value)
+
+    def exists(self, symbol):
+        for name, param in self.params.items():
+            if param.symbol == symbol:
+                return True
+
+        return False
 
     def value(self, symbol):
         for name, param in self.params.items():
@@ -153,12 +181,15 @@ class _SubCircuit():
         clist = []
 
         for element in self.subcir.components:
-            clist.append(element.replace(node_map, self.parameter))
+            new_element = element.replace(node_map, self.parameter)
+            new_element.name = new_element.name  + "_" +  self.subcir.name
+            clist.append(new_element)
 
         return clist
 
 class SubCircuit():
-    def __init__(self, export_nodes, model):
+    def __init__(self, name, export_nodes, model):
+        self.name = name
         self.components = []
         self.model = model
         self.voltages = {} #for voltages and currents
@@ -181,7 +212,7 @@ class SubCircuit():
                 return str(i)
 
     def V(self, node):
-        symbol = sy.symbol("V_"+str(node))
+        symbol = sy.Symbol("V_"+str(node))
         self.voltages[node] = symbol
         return symbol
 
@@ -207,18 +238,102 @@ class SubCircuit():
         #return (list of components) should work with subcircuit in subcircuit too
 
 
-class Circuit:
-    def __init__(self):
-        pass
+"""
+Main Circuit class which holds the definition of the Circuit and compiles circuit to matricies
+"""
+class Circuit():
+    def __init__(self, ref_node):
+        self.name = ""
+        self.G = nx.MultiGraph()
+        self.ref_node = ref_node
+        self.name2node = {} #0 as reserved as GND
 
-    def V(self, node):
-        pass
+    def add_element(self, element):
+        self.G.add_edges_from([(*element.nodes, {'element': element})])
 
-    def I(self, component):
-        pass
+    def generate_free_node(self):
+        used_node_nrs = []
+        
+        for node_name in self.name2node.keys():
+            try:
+                node_nr = int(node_name)
+                used_node_nrs.append(node_nr)
+            except:
+                continue
 
-    def define(self, components):
-        pass
+        #must be not super efficient jet: get the smalest number which is not in list
+        for i in range(len(used_node_nrs)+1):
+            if i not in used_node_nrs:
+                self.name2node[str(i)] = max(self.name2node.values())+1
+                return str(i)
+            
+    def define(self, celements):
+        # Get all nodes
+        name_nodes = [str(self.ref_node)] #Ref node is 0
+        for i, element in enumerate(celements):
+            for node in element.nodes:
+                if not node in name_nodes:
+                    name_nodes.append(str(node))
+
+        #assing a ascending number to it
+        for i, name_node in enumerate(name_nodes):
+            self.name2node[name_node] = i
+
+        #Get elements from subcircuits
+        elements = []
+        for element in celements:
+            if isinstance(element, _SubCircuit):
+                components = element.components(self)
+                for component in components:
+                    elements.append(component)
+            else:
+                elements.append(element)
+
+        print(name_nodes)
+
+        print(self.name2node)
+        
+        #add elements to graph
+        for i, element in enumerate(elements):
+            self.add_element(element)
+
+    def name_by_id(self, id):
+        for n1 ,n2 , data in self.G.edges(data=True):
+            element = data["element"]
+            if id == element.id:
+                return element.name
+
+    def to_netlist(self):
+        netlist = ""
+        for n1 ,n2 , data in self.G.edges(data=True):
+            element = data["element"]
+            netlist = netlist + element.netlist_cmd() + "\n"
+
+        return netlist
+
+
+    def matrices(self, symbolic = True):
+        n = self.G.number_of_nodes()
+
+        Y = amatrix()
+        RHS = avector() # soruces
+        X = state_vector(n)
+
+        if symbolic:
+            Y = amatrix(init_value = 0)
+            RHS = avector(init_value = 0) # soruces
+
+        ## Add Stamp to Matrices
+        for n1 ,n2 , data in self.G.edges(data=True):
+            element = data["element"]
+            element.stamp(X, Y, RHS, self.name2node, symbolic=symbolic)
+
+        if len(RHS.to_list()) != X._idx()+1:
+            RHS[X._idx()] = 0.0
+
+
+        return X, Y.to_list(), RHS.to_list()
+
 
 from sympy.functions import *
 
@@ -230,21 +345,29 @@ diode_model = Model("Diode",
 
 
 
-diode = SubCircuit([1,3], diode_model)
+diode = SubCircuit("Diode", [1,3], diode_model)
 # expression = lambda param: f"{param.IS}*(exp((V(3)-V(2))/({param.UT})) - 1)"
 expression = diode_model.IS * exp((diode.V(2)-diode.V(3))/diode_model.UT) - 1
 
 
 
 diode.define([
-    R("R1", [1, 2], params.R1),
-    CTRL_CS("C1", [2, 3], expression), #CTRL source accept function or string
+    R("R1", [1, 2], diode_model.RS),
+    CTRL_CS("G1", [2, 3], expression, 0.6), #CTRL source accept function or string
 ])
 
 
 c = Circuit(0)
-model = diode_model("RS":0.1, "IS": 1e-6, "UT": 0.3433)
+#model = diode_model(**{"RS" :0.1, "IS": 1e-6, "UT": 0.3433})
+diode_model = Model("Diode",
+    IS = 123,
+    UT = 4123,
+    RS = 0.1545
+)
 c.define([
     R("R1", [1, 2], 300),
-    diode("D1", [1,2], model)
+    diode("D1", [1,2], diode_model)
 ])
+
+
+print(c.to_netlist())
