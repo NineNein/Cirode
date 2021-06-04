@@ -2,8 +2,11 @@
 - controlled sources can be used to implement diodes
 - uses GSL libary to find roots
 
-- static ctrl diodes still bugy
 - need to check sign convention...
+
+- implement transistors
+- simplify ctrl sources if equation is linear
+- make a resistance of 0 possible
 
 ### subcircuts
 - implementation of subcircuit
