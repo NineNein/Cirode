@@ -289,7 +289,7 @@ class CTRL_CS(OnePortElement): #  Controled Current Source
 
         #new_expression = new_expression.subs(subcircuit.V(node), circuit.V(node_map[node]))
         print(subs)
-        new_expression = new_expression.subs(subs)
+        new_expression = new_expression.subs(subs ,simultaneous=True)
         print(new_expression)
 
         for name, param in parameters.params.items(): 
