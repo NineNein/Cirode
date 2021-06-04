@@ -268,6 +268,8 @@ class _SubCircuit():
             if node not in node_map:
                 node_map[node] = circuit.generate_free_node()
 
+        print("Node Map: ", self.name, node_map)
+
         clist = []
 
         for element in self.subcir.components:

@@ -276,18 +276,21 @@ class CTRL_CS(OnePortElement): #  Controled Current Source
         if parameters.exists(self.value):
             new_value = parameters.value(self.value)
 
-        print("Replace Nodes and parameters in Expression")
+        print("Replace Nodes and parameters in Expression", self.expression)
 
         new_expression = self.expression
         subs = {}
+        #subs = []
         print(new_expression)
         for node in subcircuit.nodes:
             print(node, subcircuit.V(node), circuit.V(node_map[node]))
-            subs[sy.UnevaluatedExpr(subcircuit.V(node))] = sy.UnevaluatedExpr(circuit.V(node_map[node]))
+            subs[subcircuit.V(node)] = sy.UnevaluatedExpr(circuit.V(node_map[node]))
+            #subs.append((sy.UnevaluatedExpr(subcircuit.V(node)), sy.UnevaluatedExpr(circuit.V(node_map[node]))))
 
         #new_expression = new_expression.subs(subcircuit.V(node), circuit.V(node_map[node]))
         print(subs)
         new_expression = new_expression.subs(subs)
+        print(new_expression)
 
         for name, param in parameters.params.items(): 
             new_expression = new_expression.subs(param.symbol, param.value)

@@ -234,7 +234,7 @@ namespace diode_circuit
 
 
         double I_0     = gsl_vector_get(xs, 0);
-        double Icalc_0 = 1.0e-15*exp(-38.6473429951691*quants.V_2 + 38.6473429951691*quants.V_3) - 1.0e-15;
+        double Icalc_0 = 1.0e-15*(-1 + exp(38.6473429951691*(-quants.V_2 + quants.V_3)));
         gsl_vector_set (f, 0, I_0-Icalc_0);
         
 
