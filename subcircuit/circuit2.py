@@ -125,7 +125,12 @@ class Model():
         for name, value in kwargs.items():
             self.params[name] = Parameter(name, value)
 
-        
+    def __repr__(self):
+        pairs = []
+        for name, param in self.params.items():
+            pairs.append(str(name) + "=" + str(param.value))
+
+        return " ".join(pairs)
 
     def __getattr__(self, attr):
         if attr in self.params.keys():
@@ -162,17 +167,26 @@ class Expression():
 
 class _SubCircuit():
     def __init__(self, subcircuit, name, nodes, parameter):
-        self.nodes = []
+        self.nodes = list(map(str,nodes))
         self.subcir = subcircuit
         self.parameter = parameter
+        self.name = name
 
         assert len(nodes) == len(self.subcir.export_nodes), "Number of nodes not as expected from SubCircut"
+
+    def netlist_cmd(self):
+        nodes_str = []
+        for node in self.nodes:
+            nodes_str = " ".join(self.nodes)
+
+        return self.name + " " + nodes_str + " " + str(self.parameter.name)
 
     def components(self, circuit):
         #generate map subcircuit node to parent circuit free node
         node_map = {}
         for en, n in zip(self.subcir.export_nodes, self.nodes):
-            node_map[en] = n
+            node_map[str(en)] = str(n)
+
 
         for node in self.subcir.nodes:
             if node not in node_map:
@@ -181,7 +195,7 @@ class _SubCircuit():
         clist = []
 
         for element in self.subcir.components:
-            new_element = element.replace(node_map, self.parameter)
+            new_element = element.replace(self.subcir, circuit, node_map, self.parameter)
             new_element.name = new_element.name  + "_" +  self.subcir.name
             clist.append(new_element)
 
@@ -193,8 +207,9 @@ class SubCircuit():
         self.components = []
         self.model = model
         self.voltages = {} #for voltages and currents
-        self.export_nodes = export_nodes
+        self.export_nodes = list(map(str,export_nodes))
         self.nodes = []
+        self.elements = []
 
     def generate_free_node(self):
         used_node_nrs = []
@@ -212,14 +227,18 @@ class SubCircuit():
                 return str(i)
 
     def V(self, node):
-        symbol = sy.Symbol("V_"+str(node))
-        self.voltages[node] = symbol
-        return symbol
+        node = str(node)
+        if node not in self.voltages:
+            symbol = sy.Symbol("V_"+str(node))
+            self.voltages[node] = symbol
+
+        return self.voltages[node]
 
     def I(self, component):
         pass
 
     def define(self, elements):
+        self.elements = elements
         for element in elements:
             for node in element.nodes:
                 if not node in self.nodes:
@@ -247,6 +266,8 @@ class Circuit():
         self.G = nx.MultiGraph()
         self.ref_node = ref_node
         self.name2node = {} #0 as reserved as GND
+        self.elements = []
+        self.voltages = {} #for voltages and currents
 
     def add_element(self, element):
         self.G.add_edges_from([(*element.nodes, {'element': element})])
@@ -266,8 +287,20 @@ class Circuit():
             if i not in used_node_nrs:
                 self.name2node[str(i)] = max(self.name2node.values())+1
                 return str(i)
+
+    def V(self, node):
+        if node not in self.voltages:
+            symbol = sy.Symbol("V_"+str(node))
+            self.voltages[node] = symbol
+            
+        return self.voltages[node]
+
+    def I(self, component):
+        pass
             
     def define(self, celements):
+
+        self.elements = celements
         # Get all nodes
         name_nodes = [str(self.ref_node)] #Ref node is 0
         for i, element in enumerate(celements):
@@ -303,7 +336,7 @@ class Circuit():
             if id == element.id:
                 return element.name
 
-    def to_netlist(self):
+    def unwraped_netlist(self):
         netlist = ""
         for n1 ,n2 , data in self.G.edges(data=True):
             element = data["element"]
@@ -311,6 +344,12 @@ class Circuit():
 
         return netlist
 
+    def to_netlist(self):
+        netlist = ""
+        for element in self.elements:
+            netlist = netlist + element.netlist_cmd() + "\n"
+
+        return netlist
 
     def matrices(self, symbolic = True):
         n = self.G.number_of_nodes()
@@ -347,7 +386,7 @@ diode_model = Model("Diode",
 
 diode = SubCircuit("Diode", [1,3], diode_model)
 # expression = lambda param: f"{param.IS}*(exp((V(3)-V(2))/({param.UT})) - 1)"
-expression = diode_model.IS * exp((diode.V(2)-diode.V(3))/diode_model.UT) - 1
+expression = diode_model.IS * exp((diode.V(3)-diode.V(2))/diode_model.UT) - 1
 
 
 
@@ -371,3 +410,4 @@ c.define([
 
 
 print(c.to_netlist())
+print(c.unwraped_netlist())

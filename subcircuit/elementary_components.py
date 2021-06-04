@@ -54,7 +54,7 @@ class R(OnePortElement):
         return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
 
 
-    def replace(self, node_map, parameters):
+    def replace(self, subcircuit, circuit, node_map, parameters):
         new_nodes = []
         new_value = self.value
         for node in self.nodes:
@@ -264,7 +264,7 @@ class CTRL_CS(OnePortElement): #  Controled Current Source
 
         return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
 
-    def replace(self, node_map, parameters):
+    def replace(self, subcircuit, circuit, node_map, parameters):
         new_nodes = []
         new_value = self.value
         for node in self.nodes:
@@ -278,7 +278,20 @@ class CTRL_CS(OnePortElement): #  Controled Current Source
 
         print("Replace Nodes and parameters in Expression")
 
-        return CTRL_CS(self.name, new_nodes, self.expression, new_value)
+        new_expression = self.expression
+        subs = {}
+        print(new_expression)
+        for node in subcircuit.nodes:
+            print(node, subcircuit.V(node), circuit.V(node_map[node]))
+            subs[sy.UnevaluatedExpr(subcircuit.V(node))] = sy.UnevaluatedExpr(circuit.V(node_map[node]))
+
+
+        #new_expression = new_expression.subs(subcircuit.V(node), circuit.V(node_map[node]))
+        print(subs)
+        new_expression = new_expression.subs(subs)
+        
+        print(new_expression)
+        return CTRL_CS(self.name, new_nodes, new_expression, new_value)
 
     def stamp(self, state_vector, Y, RHS, name2node, symbolic=True):
         k = name2node[self.nodes[0]]-1
