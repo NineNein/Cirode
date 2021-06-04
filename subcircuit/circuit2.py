@@ -161,10 +161,6 @@ class Model():
         raise ValueError("Symbol not found in Model")
 
 
-class Expression():
-    pass
-
-
 class _SubCircuit():
     def __init__(self, subcircuit, name, nodes, parameter):
         self.nodes = list(map(str,nodes))
@@ -196,7 +192,7 @@ class _SubCircuit():
 
         for element in self.subcir.components:
             new_element = element.replace(self.subcir, circuit, node_map, self.parameter)
-            new_element.name = new_element.name  + "_" +  self.subcir.name
+            new_element.name = new_element.name  + "_" +  self.name
             clist.append(new_element)
 
         return clist
@@ -229,7 +225,7 @@ class SubCircuit():
     def V(self, node):
         node = str(node)
         if node not in self.voltages:
-            symbol = sy.Symbol("V_"+str(node))
+            symbol = sy.Symbol("V("+str(node) + ")")
             self.voltages[node] = symbol
 
         return self.voltages[node]
@@ -290,7 +286,7 @@ class Circuit():
 
     def V(self, node):
         if node not in self.voltages:
-            symbol = sy.Symbol("V_"+str(node))
+            symbol = sy.Symbol("V("+str(node) + ")")
             self.voltages[node] = symbol
             
         return self.voltages[node]
@@ -405,7 +401,9 @@ diode_model = Model("Diode",
 )
 c.define([
     R("R1", [1, 2], 300),
-    diode("D1", [1,2], diode_model)
+    diode("D1", [1,2], diode_model),
+    R("R2", [2, 3], 300),
+    diode("D2", [3,0], diode_model),
 ])
 
 

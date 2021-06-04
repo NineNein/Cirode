@@ -13,6 +13,7 @@ import circuit
 from circuit import Circuit
 import re
 import string
+import subcircuit_elements as se
 
 def oneport(line, namelist):
     #line = line.lower()
@@ -153,7 +154,7 @@ def diode(line, component_list, namelist, model_list):
         if model.name == model_name:
             break
         
-    component_list.append(circuit.Diode(name, nodes , model))
+    component_list.append(se.diode(name, nodes , model))
 
     return True
 
@@ -163,7 +164,7 @@ def diode(line, component_list, namelist, model_list):
 def diode_model(name, model, params, model_list):
     if model.upper() != "D":
         return False
-    model_list.append(circuit.diode_model(name, **params))
+    model_list.append(circuit.Model(name, **params))
     return True
 
 models = [

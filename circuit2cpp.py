@@ -123,7 +123,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
             quant_expr[i] = quant_expr[i].split("=")[0] + "=" + re.sub(str(name) + r'(?!(\w+))', 'ctrl_sources.' + str(name), quant_expr[i].split("=")[1], flags=re.IGNORECASE)
 
 
-        expr = element.expression
+        expr = str(element.expression)
 
         #re_model = re.compile(r"V\((.*?)\)")
         output = re.findall(r"V\((.*?)\)", expr)
