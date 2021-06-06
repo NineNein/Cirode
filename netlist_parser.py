@@ -8,6 +8,9 @@ Iname N+ N- VALUE
 
 """
 
+"""
+This served well in the beginning maybe replace soon with a PEG parser?
+"""
 
 import circuit
 from circuit import Circuit

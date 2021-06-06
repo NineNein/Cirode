@@ -3,6 +3,10 @@ from sympy import *
 import sympy as sy
 import re
 
+"""
+This works for now but needs a clean up and more structure, comments?
+"""
+
 
 def compile2cpp(Circuit, circuit_name, output_file):
     Cir = Circuit

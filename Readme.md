@@ -5,8 +5,11 @@
 - need to check sign convention...
 
 - implement transistors
-- simplify ctrl sources if equation is linear
+- simplify ctrl sources if equation is linear !!!! or equation independent of any changes to its value
 - make a resistance of 0 possible
+- let use newton method the last determined value as start value for next one
+- build automatic tests https://www.benjack.io/2018/02/02/python-cpp-revisited.html 
+- https://github.com/cechrist/cardoon/tree/master/cardoon
 
 ### subcircuts
 - implementation of subcircuit
