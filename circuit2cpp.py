@@ -16,6 +16,8 @@ def compile2cpp(Circuit, circuit_name, output_file):
     #Prepare Righ Hand Side
     idxs = sorted(list(X.state_vector["dt"].keys()))
 
+    vector_size = len(idxs)
+
     if len(idxs) == 0:
         #raise ValueError("Netlist needs an dynamic Element")
         if len(X.state_vector["sources"]) == 0:
@@ -206,6 +208,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
 
         circuit_name = circuit_name
         output = template.render(
+            vector_size = vector_size,
             circuit_desc = Cir.to_netlist(),
             circuit_name=circuit_name, 
             exprs = dt_expr, 

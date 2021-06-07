@@ -252,6 +252,14 @@ class IS(OnePortElement): #Current Source
 """
 Class for a Controled Current Source, contains netlist command creation and the stamp for a Controled Current Source
 """
+
+
+class non_linear_element():
+    def __init__(self, name, nodes, expression):
+        pass
+
+
+
 class CTRL_CS(OnePortElement): #  Controled Current Source
     def __init__(self, name, nodes, expression, start_value):
         super().__init__(name, nodes, start_value)

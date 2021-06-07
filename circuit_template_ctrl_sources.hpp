@@ -12,6 +12,8 @@ Description of Circuit:
 {{circuit_desc}}
 */
 
+#define {{circuit_name.upper()}}_VECTOR_SIZE {{vector_size}}
+
 namespace {{circuit_name}}
 {
 
@@ -120,7 +122,7 @@ namespace {{circuit_name}}
             gsl_vector *xs = gsl_vector_alloc (n);
 
             {% for name, std_value, expr in Ctrl_Sources -%}
-            gsl_vector_set (xs, {{loop.index-1}}, {{std_value}});
+            gsl_vector_set (xs, {{loop.index-1}}, this->start_values[{{loop.index-1}}]);
             {% endfor %}
             
 
@@ -154,6 +156,12 @@ namespace {{circuit_name}}
                 {% endfor %}
             };
 
+            {% for name, std_value, expr in Ctrl_Sources -%}
+            //this->start_values[{{loop.index-1}}] =  gsl_vector_get (s->x, {{loop.index-1}});
+            {% endfor %}
+
+            
+
             gsl_multiroot_fsolver_free (s);
             gsl_vector_free (xs);
 
@@ -163,8 +171,15 @@ namespace {{circuit_name}}
 
 
         Components components;
+        double start_values[{{vector_size}}];
+        {{circuit_name}}(Components components) : components(components) { 
 
-        {{circuit_name}}(Components components) : components(components) { }
+            {% for name, std_value, expr in Ctrl_Sources -%}
+            this->start_values[{{loop.index-1}}] = {{std_value}};
+            {% endfor -%}
+            
+
+        }
 
         Quantities quantities(
             {% set comma = joiner(",") %}

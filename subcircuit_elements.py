@@ -17,9 +17,9 @@ expression = diode_model.IS * (exp((diode.V(2)-diode.V(3))/diode_model.UT) - 1)
 diode.define([
     R("R1", [1, 2], diode_model.RS),
     CTRL_CS("G1", [3, 2], expression, 0.6),
+])
 
-
-https://awrcorp.com/download/faq/english/docs/Elements/PNCAP.htm
+# https://awrcorp.com/download/faq/english/docs/Elements/PNCAP.htm
 
 
 """
