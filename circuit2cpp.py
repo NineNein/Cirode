@@ -3,6 +3,7 @@ from sympy import *
 import sympy as sy
 import re
 
+
 """
 This works for now but needs a clean up and more structure, comments?
 """
@@ -84,7 +85,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
     ## replace names in both expr with this->components.name to adapt to template.hpp
     for n1 ,n2 , data in Cir.G.edges(data=True):
         element = data["element"]
-        if element in X.state_vector["sources"] or element in X.state_vector["ctrl_sources"]:
+        if element in X.state_vector["sources"] or element in X.state_vector["nonlinear"]:
             continue
 
         name = element.name
@@ -108,33 +109,41 @@ def compile2cpp(Circuit, circuit_name, output_file):
         for i, expr in enumerate(dt_expr): 
             dt_expr[i] = re.sub( str(name) + r'(?!(\w+))', 'sources.' + str(name), expr, flags=re.IGNORECASE)
 
-        for i, expr in enumerate(quant_expr): #Did this because I could not figure out a regex which starts after =
+        for i, expr in enumerate(quant_expr):
             quant_expr[i] = quant_expr[i].split("=")[0] + "=" + re.sub(str(name) + r'(?!(\w+))', 'sources.' + str(name), quant_expr[i].split("=")[1], flags=re.IGNORECASE)
 
 
-    #Fill ctrl_sources struct
+    #Fill nonlinear struct
     print(Cir.name2node)
-    ctrl_sources = []
+    nonlinear = []
+    #nonlinear_static = []
+    #nonlinear_linear = []
+    nonlinear_independent = []
     for n1 ,n2 , data in Cir.G.edges(data=True):
         element = data["element"]
-        if element not in X.state_vector["ctrl_sources"]:
+        if element not in X.state_vector["nonlinear"]:
             continue
 
         name = element.name
 
         for i, expr in enumerate(dt_expr): 
-            dt_expr[i] = re.sub( str(name) + r'(?!(\w+))', 'ctrl_sources.' + str(name), expr, flags=re.IGNORECASE)
+            dt_expr[i] = re.sub( str(name) + r'(?!(\w+))', 'nonlinear.' + str(name), expr, flags=re.IGNORECASE)
 
-        for i, expr in enumerate(quant_expr): #Did this because I could not figure out a regex which starts after =
-            quant_expr[i] = quant_expr[i].split("=")[0] + "=" + re.sub(str(name) + r'(?!(\w+))', 'ctrl_sources.' + str(name), quant_expr[i].split("=")[1], flags=re.IGNORECASE)
+        for i, expr in enumerate(quant_expr): 
+            quant_expr[i] = quant_expr[i].split("=")[0] + "=" + re.sub(str(name) + r'(?!(\w+))', 'nonlinear.' + str(name), quant_expr[i].split("=")[1], flags=re.IGNORECASE)
 
 
         expr = str(element.expression)
 
+        independent = False
+
         #re_model = re.compile(r"V\((.*?)\)")
         output = re.findall(r"V\((.*?)\)", expr)
         if not output:
-            continue
+            independent = True
+
+        for match in output:
+
 
         for match in output:
             match_node = Cir.name2node[match]
@@ -143,14 +152,14 @@ def compile2cpp(Circuit, circuit_name, output_file):
             print(expr)
 
             
-        ctrl_sources.append([name, element.value, expr])
+        nonlinear.append([name, element.value, expr])
 
         # expr = element.expression
         # for i, quant in enumerate(quantities):  
             
         #     expr = re.sub( str(quant) + r'(?!(\w+))', 'quants.' + str(quant), expr, flags=re.IGNORECASE)
 
-        # ctrl_sources.append([name, element.value, expr])
+        # nonlinear.append([name, element.value, expr])
 
         
 
@@ -188,7 +197,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
 
 
 
-    if not ctrl_sources:
+    if not nonlinear:
 
         #template = env.get_template(dir_path + '/circuit_template.hpp')
         template = env.get_template('circuit_template.hpp')
@@ -204,7 +213,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
             Components=components)
 
     else:
-        template = env.get_template('circuit_template_ctrl_sources.hpp')
+        template = env.get_template('circuit_template_nonlinear.hpp')
 
         circuit_name = circuit_name
         output = template.render(
@@ -213,7 +222,8 @@ def compile2cpp(Circuit, circuit_name, output_file):
             circuit_name=circuit_name, 
             exprs = dt_expr, 
             Sources = sources,
-            Ctrl_Sources = ctrl_sources,
+            #nonlinear = nonlinear,
+            nonlinear = nonlinear,
             quant_expr = quant_expr,
             Quantities = quantities,
             Components=components)

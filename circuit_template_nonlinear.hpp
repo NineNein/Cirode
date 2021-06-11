@@ -33,9 +33,9 @@ namespace {{circuit_name}}
     };
     {% endif %}
 
-    {% if Ctrl_Sources is defined and Ctrl_Sources[0] is defined %}
-    struct Ctrl_Sources {
-        {% for name, std_value, expr in Ctrl_Sources -%}
+    {% if nonlinear is defined and nonlinear[0] is defined %}
+    struct Nonlinear {
+        {% for name, std_value, expr in nonlinear -%}
             double {{name}} = {{std_value}};
         {% endfor %}
     };
@@ -77,8 +77,8 @@ namespace {{circuit_name}}
             {% if Sources is defined and Sources[0] is defined -%} {{comma()}}
             const Sources sources
             {% endif -%}
-            {% if Ctrl_Sources is defined and Ctrl_Sources[0] is defined -%} {{comma()}}
-            const Ctrl_Sources ctrl_sources
+            {% if nonlinear is defined and nonlinear[0] is defined -%} {{comma()}}
+            const Nonlinear nonlinear
             {% endif -%}
         ){
             Quantities quants;
@@ -89,7 +89,7 @@ namespace {{circuit_name}}
         }
 
 
-        Ctrl_Sources get_ctrl_sources(
+        Nonlinear get_nonlinear(
             {% set comma = joiner(",") %}
             {% if exprs is defined and exprs[0] is defined -%} {{comma()}}
             const state_type &x
@@ -103,7 +103,7 @@ namespace {{circuit_name}}
 
             int status;
             size_t i, iter = 0;
-            const size_t n = {{Ctrl_Sources|length}};
+            const size_t n = {{nonlinear|length}};
 
             struct r_params p{
                 this,
@@ -121,7 +121,7 @@ namespace {{circuit_name}}
 
             gsl_vector *xs = gsl_vector_alloc (n);
 
-            {% for name, std_value, expr in Ctrl_Sources -%}
+            {% for name, std_value, expr in nonlinear -%}
             gsl_vector_set (xs, {{loop.index-1}}, this->start_values[{{loop.index-1}}]);
             {% endfor %}
             
@@ -150,22 +150,26 @@ namespace {{circuit_name}}
 
             
 
-            struct Ctrl_Sources ctrl_sources{
-                {% for name, std_value, expr in Ctrl_Sources -%}
+            struct Nonlinear nonlinear{
+                {% for name, std_value, expr in nonlinear -%}
                 gsl_vector_get (s->x, {{loop.index-1}}) {{ ", " if not loop.last else "" }}
                 {% endfor %}
             };
-
-            {% for name, std_value, expr in Ctrl_Sources -%}
-            //this->start_values[{{loop.index-1}}] =  gsl_vector_get (s->x, {{loop.index-1}});
+            double test = 0;
+            {% for name, std_value, expr in nonlinear -%}
+            // test = gsl_vector_get (s->x, {{loop.index-1}});
+            // std::cout<<test<<std::endl;
+            // this->start_values[{{loop.index-1}}] = test *0.8;
             {% endfor %}
+
+            //std::cout<<"---------------------"<<std::endl;
 
             
 
             gsl_multiroot_fsolver_free (s);
             gsl_vector_free (xs);
 
-            return ctrl_sources;
+            return nonlinear;
 
         }
 
@@ -174,8 +178,8 @@ namespace {{circuit_name}}
         double start_values[{{vector_size}}];
         {{circuit_name}}(Components components) : components(components) { 
 
-            {% for name, std_value, expr in Ctrl_Sources -%}
-            this->start_values[{{loop.index-1}}] = {{std_value}};
+            {% for name, std_value, expr in nonlinear -%}
+            this->start_values[{{loop.index-1}}] = 0.0; //{{std_value}};
             {% endfor -%}
             
 
@@ -191,7 +195,7 @@ namespace {{circuit_name}}
             {% endif -%}
         ){
             Quantities quants;
-            Ctrl_Sources ctrl_sources = this->get_ctrl_sources(
+            Nonlinear nonlinear = this->get_nonlinear(
                 {% set comma = joiner(",") %}
                 {% if exprs is defined and exprs[0] is defined -%} {{comma()}}
                 x
@@ -215,7 +219,7 @@ namespace {{circuit_name}}
         {% endif -%}
         {
 
-            Ctrl_Sources ctrl_sources = this->get_ctrl_sources(
+            Nonlinear nonlinear = this->get_nonlinear(
                 {% if exprs is defined and exprs[0] is defined -%}
                 x
                 {% endif -%}
@@ -237,8 +241,8 @@ namespace {{circuit_name}}
 
     int root_finding(const gsl_vector * xs, void *params, gsl_vector * f){
 
-        struct Ctrl_Sources ctrl_sources{
-            {% for name, std_value, expr in Ctrl_Sources -%}
+        struct Nonlinear nonlinear{
+            {% for name, std_value, expr in nonlinear -%}
             gsl_vector_get (xs, {{loop.index-1}}) {{ ", " if not loop.last else "" }}
             {% endfor %}
         };
@@ -261,13 +265,13 @@ namespace {{circuit_name}}
             {% if Sources is defined and Sources[0] is defined -%} {{ comma() }}
             sources
             {% endif -%}
-            {% if Ctrl_Sources is defined and Ctrl_Sources[0] is defined -%} {{ comma() }}
-            ctrl_sources
+            {% if nonlinear is defined and nonlinear[0] is defined -%} {{ comma() }}
+            nonlinear
             {% endif -%}
             );
 
 
-        {% for name, std_value, expr in Ctrl_Sources -%}
+        {% for name, std_value, expr in nonlinear -%}
         double I_{{loop.index-1}}     = gsl_vector_get(xs, {{loop.index-1}});
         double Icalc_{{loop.index-1}} = {{expr}};
         gsl_vector_set (f, {{loop.index-1}}, I_{{loop.index-1}}-Icalc_{{loop.index-1}});

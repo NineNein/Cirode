@@ -250,14 +250,131 @@ class IS(OnePortElement): #Current Source
         RHS[l] = value
 
 """
-Class for a Controled Current Source, contains netlist command creation and the stamp for a Controled Current Source
+Class non linear elements
 """
 
 
-class non_linear_element():
-    def __init__(self, name, nodes, expression):
-        pass
+def replace_nodes(expression, subcircuit, circuit, nodes, node_map):
+        new_nodes = []
+        for node in nodes:
+            if node not in node_map:
+                raise ValueError("node_map does not contain node")
+            new_nodes.append(node_map[node])
 
+        subs = {}
+        for node in subcircuit.nodes:
+            subs[subcircuit.V(node)] = sy.UnevaluatedExpr(circuit.V(node_map[node]))
+
+        expression = expression.subs(subs ,simultaneous=True)
+        return new_nodes, expression
+
+class non_linear_element():
+    def __init__(self, name, nodes, expression, start_value = 0):
+        self.nodes = nodes
+        self.expression = expression
+        self.start_value = start_value
+
+    """
+    Check if input variables are dependend of change in output value
+        - Yes, then newton method
+        - Yes, but very weak, possible optimisation to neglegt this dependence
+        - No, just calculate the new value
+
+        - allow time dependence
+        - allow static expression -> fall back to linear
+        - check for linear expresseion -> implement linear stamp
+
+    """
+
+"""
+Class for a Capacitor, contains netlist command creation and the stamp for a Capacitor
+"""
+class CNL(OnePortElement):
+    def __init__(self, name, nodes, expression, start_value):
+        super().__init__(name, nodes, start_value)
+        self.expression = expression
+
+    def netlist_cmd(self):
+        name = self.name.upper()
+        if not name.startswith("K"):
+            name = "K" + name
+
+        return name + " " + str(self.nodes[0]) + " " + str(self.nodes[1]) + " " + str(self.value) 
+
+    def replace(self, subcircuit, circuit, node_map, parameters):
+        new_nodes = []
+        new_value = self.value
+        for node in self.nodes:
+            if node not in node_map:
+                raise ValueError("node_map does not contain node")
+
+            new_nodes.append(node_map[node])
+
+        if parameters.exists(self.value):
+            new_value = parameters.value(self.value)
+
+        print("Replace Nodes and parameters in Expression", self.expression)
+
+        new_expression = self.expression
+        subs = {}
+        #subs = []
+        print(new_expression)
+        for node in subcircuit.nodes:
+            print(node, subcircuit.V(node), circuit.V(node_map[node]))
+            subs[subcircuit.V(node)] = sy.UnevaluatedExpr(circuit.V(node_map[node]))
+            #subs.append((sy.UnevaluatedExpr(subcircuit.V(node)), sy.UnevaluatedExpr(circuit.V(node_map[node]))))
+
+        #new_expression = new_expression.subs(subcircuit.V(node), circuit.V(node_map[node]))
+        print(subs)
+        new_expression = new_expression.subs(subs ,simultaneous=True)
+        print(new_expression)
+
+        for name, param in parameters.params.items(): 
+            new_expression = new_expression.subs(param.symbol, param.value)
+        
+        print(new_expression)
+        return CNL(self.name, new_nodes, new_expression, new_value)
+
+    def stamp(self, state_vector, Y, RHS, name2node, symbolic=True):
+        k = name2node[self.nodes[0]]-1
+        l = name2node[self.nodes[1]]-1
+
+        state_vector.state_vector["nonlinear"].append(self)
+
+        br_idx = state_vector.add_current(self.id)
+
+        if symbolic:
+            value = sy.Symbol(self.name)
+        else:
+            value = self.value
+
+
+        if k >= 0:
+            dk = state_vector.dt(k)
+            if dk == -1:
+                dk = state_vector.add_dt(k)
+                Y[dk][k] = 1 ## add unit equation
+
+            Y[k][br_idx] += 1
+            Y[br_idx][dk] += value
+        
+        if l >= 0:
+            dl = state_vector.dt(l)
+            if dl == -1:
+                dl = state_vector.add_dt(l)
+                Y[dl][l] = 1 ## add unit equatio
+
+            Y[l][br_idx] += -1
+            Y[br_idx][dl] += -value
+
+        Y[br_idx][br_idx] = 1
+
+        RHS[br_idx] = 0.0
+
+
+"""
+Class for a Controled Current Source, contains netlist command creation and the stamp for a Controled Current Source
+"""
 
 
 class CTRL_CS(OnePortElement): #  Controled Current Source
@@ -310,7 +427,7 @@ class CTRL_CS(OnePortElement): #  Controled Current Source
         k = name2node[self.nodes[0]]-1
         l = name2node[self.nodes[1]]-1
 
-        state_vector.state_vector["ctrl_sources"].append(self)
+        state_vector.state_vector["nonlinear"].append(self)
 
         assert symbolic, "VCCS can't be used yet in non symbolic mode"
 

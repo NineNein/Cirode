@@ -19,6 +19,7 @@ diode.define([
     CTRL_CS("G1", [3, 2], expression, 0.6),
 ])
 
+# https://electronics.stackexchange.com/questions/57829/defining-a-nonlinear-capacitor-in-ngspice
 # https://awrcorp.com/download/faq/english/docs/Elements/PNCAP.htm
 
 

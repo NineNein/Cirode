@@ -1,6 +1,6 @@
-# Currently adding Controlled sources
-- controlled sources can be used to implement diodes
-- uses GSL libary to find roots
+# Checklist, Notes and ToDos
+
+- implement automatic tests, instead of testing the examples by hand always
 
 - need to check sign convention...
 
@@ -10,6 +10,9 @@
 - let use newton method the last determined value as start value for next one
 - build automatic tests https://www.benjack.io/2018/02/02/python-cpp-revisited.html 
 - https://github.com/cechrist/cardoon/tree/master/cardoon
+
+- implement hystersis effect
+- build in derivative  of expression for faster newton method
 
 ### subcircuts
 - implementation of subcircuit

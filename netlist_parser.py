@@ -140,6 +140,36 @@ def ctrl_current_source(line, component_list, namelist, model_list):
 
     return True
 
+def non_linear_cap(line, component_list, namelist, model_list):
+    success, words, nodes = oneport(line, namelist)
+
+    if not success:
+        return False
+
+    if words[0][0].lower() != "k":
+        return False
+
+    name = words[0].upper()
+    
+    value = float(words[3])
+
+    idx = len(' '.join(words[:4]))
+    expression = line[idx+1:-1]
+
+
+    from sympy.parsing.sympy_parser import parse_expr
+
+
+    print(expression)
+
+    expression = parse_expr(expression)
+
+    print(expression, expression.args)
+    
+    component_list.append(circuit.CNL(name, nodes , expression, value))
+
+    return True
+
 def diode(line, component_list, namelist, model_list):
     success, words, nodes = oneport(line, namelist)
 
@@ -212,6 +242,7 @@ components = [
     current_source,
     votlage_source,
     ctrl_current_source,
+    non_linear_cap,
     diode
 ]
 

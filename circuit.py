@@ -80,6 +80,7 @@ class state_vector:
             "dt" : {}, #idx of related variabeel, idx in the state vector
             "sources" : [], #list of sources
             "ctrl_sources" : [], #list of controled sources
+            "nonlinear" : [], #list of non linear elements
         }
 
     def _idx(self):
