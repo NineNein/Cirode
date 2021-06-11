@@ -155,12 +155,12 @@ namespace {{circuit_name}}
 
             struct Nonlinear nonlinear{
                 {% set comma = joiner(",") %}
-                {% for name, std_value, expr in nonlinear -%}
-                gsl_vector_get (s->x, {{loop.index-1}}) {{comma()}}
-                {% endfor %}{{comma()}}
+                {% for name, std_value, expr in nonlinear -%}{{comma()}}
+                gsl_vector_get (s->x, {{loop.index-1}}) 
+                {% endfor %}
 
-                {% for name, std_value, expr in nonlinear_independent -%}
-                {{std_value}}  {{comma()}}
+                {% for name, std_value, expr in nonlinear_independent -%} {{comma()}}
+                {{std_value}} 
                 {% endfor %}
             };
 
@@ -280,9 +280,9 @@ namespace {{circuit_name}}
 
         struct Nonlinear nonlinear{
             {% set comma = joiner(",") %}
-            {% for name, std_value, expr in nonlinear -%}
-            gsl_vector_get (xs, {{loop.index-1}}) {{comma()}}
-            {% endfor %}{{comma()}}
+            {% for name, std_value, expr in nonlinear -%}{{comma()}}
+            gsl_vector_get (xs, {{loop.index-1}}) 
+            {% endfor %}
 
             {% for name, std_value, expr in nonlinear_independent -%}
                 {{std_value}}  {{comma()}}

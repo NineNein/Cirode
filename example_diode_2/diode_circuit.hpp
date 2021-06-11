@@ -19,6 +19,8 @@ C1 0 3 1e-05
 
 */
 
+#define DIODE_CIRCUIT_VECTOR_SIZE 2
+
 namespace diode_circuit
 {
 
@@ -45,9 +47,10 @@ namespace diode_circuit
     
 
     
-    struct Ctrl_Sources {
+    struct Nonlinear {
         double G1_D1 = 0.6;
         double G1_D2 = 0.6;
+        
         
     };
     
@@ -93,27 +96,27 @@ namespace diode_circuit
             ,
             const Sources sources
             ,
-            const Ctrl_Sources ctrl_sources
+            const Nonlinear nonlinear
             ){
             Quantities quants;
             quants.V_1 = sources.V1;
             quants.V_2 = x[0];
             quants.V_3 = x[1];
-            quants.V_4 = -ctrl_sources.G1_D1*this->components.R1_D1 + sources.V1;
-            quants.V_5 = -ctrl_sources.G1_D2*this->components.R1_D2 + x[0];
-            quants.I_V1 = ctrl_sources.G1_D1;
-            quants.I_R1_D1 = -ctrl_sources.G1_D1;
-            quants.I_C2 = ctrl_sources.G1_D1 - ctrl_sources.G1_D2 - x[0]/this->components.R2;
+            quants.V_4 = -nonlinear.G1_D1*this->components.R1_D1 + sources.V1;
+            quants.V_5 = -nonlinear.G1_D2*this->components.R1_D2 + x[0];
+            quants.I_V1 = nonlinear.G1_D1;
+            quants.I_R1_D1 = -nonlinear.G1_D1;
+            quants.I_C2 = nonlinear.G1_D1 - nonlinear.G1_D2 - x[0]/this->components.R2;
             quants.I_R2 = x[0]/this->components.R2;
             quants.I_R1 = x[1]/this->components.R1;
-            quants.I_C1 = ctrl_sources.G1_D2 - x[1]/this->components.R1;
-            quants.I_R1_D2 = -ctrl_sources.G1_D2;
+            quants.I_C1 = nonlinear.G1_D2 - x[1]/this->components.R1;
+            quants.I_R1_D2 = -nonlinear.G1_D2;
             
             return quants;
         }
 
 
-        Ctrl_Sources get_ctrl_sources(
+        Nonlinear get_nonlinear(
             
             
             const state_type &x
@@ -141,8 +144,8 @@ namespace diode_circuit
 
             gsl_vector *xs = gsl_vector_alloc (n);
 
-            gsl_vector_set (xs, 0, 0.6);
-            gsl_vector_set (xs, 1, 0.6);
+            gsl_vector_set (xs, 0, this->start_values[0]);
+            gsl_vector_set (xs, 1, this->start_values[1]);
             
             
 
@@ -168,25 +171,59 @@ namespace diode_circuit
             }
             while (status == GSL_CONTINUE && iter < 1000);
 
-            
 
-            struct Ctrl_Sources ctrl_sources{
-                gsl_vector_get (s->x, 0) , 
+
+            struct Nonlinear nonlinear{
+                
+                
+                gsl_vector_get (s->x, 0) 
+                ,
                 gsl_vector_get (s->x, 1) 
                 
+
+                
             };
+
+                Quantities quants = this->_quantities(
+                 x
+                ,
+                sources
+                ,
+                nonlinear
+                );
+
+            
+
+
+
+            double test = 0;
+            // test = gsl_vector_get (s->x, 0);
+            // std::cout<<test<<std::endl;
+            // this->start_values[0] = test *0.8;
+            // test = gsl_vector_get (s->x, 1);
+            // std::cout<<test<<std::endl;
+            // this->start_values[1] = test *0.8;
+            
+
+            //std::cout<<"---------------------"<<std::endl;
+
+            
 
             gsl_multiroot_fsolver_free (s);
             gsl_vector_free (xs);
 
-            return ctrl_sources;
+            return nonlinear;
 
         }
 
 
         Components components;
+        double start_values[2];
+        diode_circuit(Components components) : components(components) { 
 
-        diode_circuit(Components components) : components(components) { }
+            this->start_values[0] = 0.0; //0.6;
+            this->start_values[1] = 0.0; //0.6;
+            }
 
         Quantities quantities(
             
@@ -196,7 +233,7 @@ namespace diode_circuit
             const Sources sources
             ){
             Quantities quants;
-            Ctrl_Sources ctrl_sources = this->get_ctrl_sources(
+            Nonlinear nonlinear = this->get_nonlinear(
                 
                 
                 x
@@ -207,15 +244,15 @@ namespace diode_circuit
             quants.V_1 = sources.V1;
             quants.V_2 = x[0];
             quants.V_3 = x[1];
-            quants.V_4 = -ctrl_sources.G1_D1*this->components.R1_D1 + sources.V1;
-            quants.V_5 = -ctrl_sources.G1_D2*this->components.R1_D2 + x[0];
-            quants.I_V1 = ctrl_sources.G1_D1;
-            quants.I_R1_D1 = -ctrl_sources.G1_D1;
-            quants.I_C2 = ctrl_sources.G1_D1 - ctrl_sources.G1_D2 - x[0]/this->components.R2;
+            quants.V_4 = -nonlinear.G1_D1*this->components.R1_D1 + sources.V1;
+            quants.V_5 = -nonlinear.G1_D2*this->components.R1_D2 + x[0];
+            quants.I_V1 = nonlinear.G1_D1;
+            quants.I_R1_D1 = -nonlinear.G1_D1;
+            quants.I_C2 = nonlinear.G1_D1 - nonlinear.G1_D2 - x[0]/this->components.R2;
             quants.I_R2 = x[0]/this->components.R2;
             quants.I_R1 = x[1]/this->components.R1;
-            quants.I_C1 = ctrl_sources.G1_D2 - x[1]/this->components.R1;
-            quants.I_R1_D2 = -ctrl_sources.G1_D2;
+            quants.I_C1 = nonlinear.G1_D2 - x[1]/this->components.R1;
+            quants.I_R1_D2 = -nonlinear.G1_D2;
             
             return quants;
         }
@@ -223,13 +260,13 @@ namespace diode_circuit
         void operator() ( const state_type &x , state_type &dxdt , const double t , const Sources sources )
         {
 
-            Ctrl_Sources ctrl_sources = this->get_ctrl_sources(
+            Nonlinear nonlinear = this->get_nonlinear(
                 x
                 ,sources
                 );
 
-            dxdt[0]=ctrl_sources.G1_D1/this->components.C2 - ctrl_sources.G1_D2/this->components.C2 - x[0]/(this->components.C2*this->components.R2);
-            dxdt[1]=ctrl_sources.G1_D2/this->components.C1 - x[1]/(this->components.C1*this->components.R1);
+            dxdt[0]=nonlinear.G1_D1/this->components.C2 - nonlinear.G1_D2/this->components.C2 - x[0]/(this->components.C2*this->components.R2);
+            dxdt[1]=nonlinear.G1_D2/this->components.C1 - x[1]/(this->components.C1*this->components.R1);
             
         }
         };
@@ -240,23 +277,41 @@ namespace diode_circuit
 
     int root_finding(const gsl_vector * xs, void *params, gsl_vector * f){
 
-        struct Ctrl_Sources ctrl_sources{
-            gsl_vector_get (xs, 0) , 
-            gsl_vector_get (xs, 1) 
-            
-        };
-
-
         diode_circuit* obj = ((struct r_params *) params)->obj;
 
         state_type x = ((struct r_params *) params)->x;
         Sources sources = ((struct r_params *) params)->sources;
+        struct Nonlinear nonlinear{
+            
+            
+            gsl_vector_get (xs, 0) 
+            ,
+            gsl_vector_get (xs, 1) 
+            
+
+            
+        };
+
+
         Quantities quants = obj->_quantities(
              x
             ,
             sources
             ,
-            ctrl_sources
+            nonlinear
+            );
+
+        
+
+
+        
+
+        quants = obj->_quantities(
+             x
+            ,
+            sources
+            ,
+            nonlinear
             );
 
 
