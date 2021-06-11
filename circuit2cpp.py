@@ -135,14 +135,28 @@ def compile2cpp(Circuit, circuit_name, output_file):
 
         expr = str(element.expression)
 
-        independent = False
+        independent = True
 
         #re_model = re.compile(r"V\((.*?)\)")
         output = re.findall(r"V\((.*?)\)", expr)
         if not output:
             independent = True
+            continue
 
+
+        ## This check is not enough, other non linear could depent on it which influence then the nodes again
         for match in output:
+            #for idx in range(X.number_of_nodes-1):
+            match_node = Cir.name2node[match]
+            idx = int(match_node) -1
+            qexpr = res[idx]
+            nn = sy.Symbol(name)
+            print(name)
+            print("qexpr.args ", qexpr.free_symbols)
+            if nn in qexpr.free_symbols:
+                independent = False
+                print(match_node, "independent = False")
+
 
 
         for match in output:
@@ -151,8 +165,10 @@ def compile2cpp(Circuit, circuit_name, output_file):
             expr = expr.replace("V("+str(match)+")", "quants.V_"+str(match_node))
             print(expr)
 
-            
-        nonlinear.append([name, element.value, expr])
+        if independent:
+            nonlinear_independent.append([name, element.value, expr])
+        else:
+            nonlinear.append([name, element.value, expr])
 
         # expr = element.expression
         # for i, quant in enumerate(quantities):  
@@ -197,7 +213,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
 
 
 
-    if not nonlinear:
+    if not nonlinear and not nonlinear_independent:
 
         #template = env.get_template(dir_path + '/circuit_template.hpp')
         template = env.get_template('circuit_template.hpp')
@@ -223,6 +239,7 @@ def compile2cpp(Circuit, circuit_name, output_file):
             exprs = dt_expr, 
             Sources = sources,
             #nonlinear = nonlinear,
+            nonlinear_independent = nonlinear_independent,
             nonlinear = nonlinear,
             quant_expr = quant_expr,
             Quantities = quantities,

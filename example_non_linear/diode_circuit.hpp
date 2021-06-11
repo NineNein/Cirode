@@ -45,8 +45,9 @@ namespace diode_circuit
 
     
     struct Nonlinear {
-        double K1 = 1e-10;
         double G1_D1 = 0.6;
+        
+        double K1 = 1e-10;
         
     };
     
@@ -120,7 +121,7 @@ namespace diode_circuit
 
             int status;
             size_t i, iter = 0;
-            const size_t n = 2;
+            const size_t n = 1;
 
             struct r_params p{
                 this,
@@ -137,7 +138,6 @@ namespace diode_circuit
             gsl_vector *xs = gsl_vector_alloc (n);
 
             gsl_vector_set (xs, 0, this->start_values[0]);
-            gsl_vector_set (xs, 1, this->start_values[1]);
             
             
 
@@ -163,20 +163,34 @@ namespace diode_circuit
             }
             while (status == GSL_CONTINUE && iter < 1000);
 
-            
+
 
             struct Nonlinear nonlinear{
-                gsl_vector_get (s->x, 0) , 
-                gsl_vector_get (s->x, 1) 
+                
+                gsl_vector_get (s->x, 0) 
+                ,
+
+                1e-10  ,
                 
             };
+
+                Quantities quants = this->_quantities(
+                 x
+                ,
+                sources
+                ,
+                nonlinear
+                );
+
+            nonlinear.K1 = 1.0e-11 - 1.0e-11*quants.V_3;
+            
+
+
+
             double test = 0;
             // test = gsl_vector_get (s->x, 0);
             // std::cout<<test<<std::endl;
             // this->start_values[0] = test *0.8;
-            // test = gsl_vector_get (s->x, 1);
-            // std::cout<<test<<std::endl;
-            // this->start_values[1] = test *0.8;
             
 
             //std::cout<<"---------------------"<<std::endl;
@@ -195,8 +209,7 @@ namespace diode_circuit
         double start_values[1];
         diode_circuit(Components components) : components(components) { 
 
-            this->start_values[0] = 0.0; //1e-10;
-            this->start_values[1] = 0.0; //0.6;
+            this->start_values[0] = 0.0; //0.6;
             }
 
         Quantities quantities(
@@ -248,18 +261,35 @@ namespace diode_circuit
 
     int root_finding(const gsl_vector * xs, void *params, gsl_vector * f){
 
-        struct Nonlinear nonlinear{
-            gsl_vector_get (xs, 0) , 
-            gsl_vector_get (xs, 1) 
-            
-        };
-
-
         diode_circuit* obj = ((struct r_params *) params)->obj;
 
         state_type x = ((struct r_params *) params)->x;
         Sources sources = ((struct r_params *) params)->sources;
+        struct Nonlinear nonlinear{
+            
+            gsl_vector_get (xs, 0) 
+            ,
+
+            1e-10  ,
+                
+        };
+
+
         Quantities quants = obj->_quantities(
+             x
+            ,
+            sources
+            ,
+            nonlinear
+            );
+
+        nonlinear.K1 = 1.0e-11 - 1.0e-11*quants.V_3;
+        
+
+
+        
+
+        quants = obj->_quantities(
              x
             ,
             sources
@@ -269,11 +299,8 @@ namespace diode_circuit
 
 
         double I_0     = gsl_vector_get(xs, 0);
-        double Icalc_0 = 1.0e-11 - 1.0e-11*quants.V_3;
+        double Icalc_0 = 1.0e-15*(-1 + exp(38.6473429951691*(-quants.V_3 + quants.V_4)));
         gsl_vector_set (f, 0, I_0-Icalc_0);
-        double I_1     = gsl_vector_get(xs, 1);
-        double Icalc_1 = 1.0e-15*(-1 + exp(38.6473429951691*(-quants.V_3 + quants.V_4)));
-        gsl_vector_set (f, 1, I_1-Icalc_1);
         
 
         return GSL_SUCCESS;

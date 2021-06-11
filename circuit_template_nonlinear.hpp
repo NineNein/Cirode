@@ -38,6 +38,9 @@ namespace {{circuit_name}}
         {% for name, std_value, expr in nonlinear -%}
             double {{name}} = {{std_value}};
         {% endfor %}
+        {% for name, std_value, expr in nonlinear_independent -%}
+            double {{name}} = {{std_value}};
+        {% endfor %}
     };
     {% endif %}
 
@@ -148,13 +151,37 @@ namespace {{circuit_name}}
             }
             while (status == GSL_CONTINUE && iter < 1000);
 
-            
+
 
             struct Nonlinear nonlinear{
+                {% set comma = joiner(",") %}
                 {% for name, std_value, expr in nonlinear -%}
-                gsl_vector_get (s->x, {{loop.index-1}}) {{ ", " if not loop.last else "" }}
+                gsl_vector_get (s->x, {{loop.index-1}}) {{comma()}}
+                {% endfor %}{{comma()}}
+
+                {% for name, std_value, expr in nonlinear_independent -%}
+                {{std_value}}  {{comma()}}
                 {% endfor %}
             };
+
+                Quantities quants = this->_quantities(
+                {% set comma = joiner(",") %}
+                {%- if exprs is defined and exprs[0] is defined %}{{comma()}} x
+                {%- endif %}
+                {% if Sources is defined and Sources[0] is defined -%} {{ comma() }}
+                sources
+                {% endif -%}
+                {% if nonlinear is defined and nonlinear[0] is defined -%} {{ comma() }}
+                nonlinear
+                {% endif -%}
+                );
+
+            {% for name, std_value, expr in nonlinear_independent -%}
+                nonlinear.{{name}} = {{expr}};
+            {% endfor %}
+
+
+
             double test = 0;
             {% for name, std_value, expr in nonlinear -%}
             // test = gsl_vector_get (s->x, {{loop.index-1}});
@@ -241,13 +268,6 @@ namespace {{circuit_name}}
 
     int root_finding(const gsl_vector * xs, void *params, gsl_vector * f){
 
-        struct Nonlinear nonlinear{
-            {% for name, std_value, expr in nonlinear -%}
-            gsl_vector_get (xs, {{loop.index-1}}) {{ ", " if not loop.last else "" }}
-            {% endfor %}
-        };
-
-
         {{circuit_name}}* obj = ((struct r_params *) params)->obj;
 
         {% if exprs is defined and exprs[0] is defined -%}
@@ -258,7 +278,38 @@ namespace {{circuit_name}}
         Sources sources = ((struct r_params *) params)->sources;
         {% endif -%}
 
+        struct Nonlinear nonlinear{
+            {% set comma = joiner(",") %}
+            {% for name, std_value, expr in nonlinear -%}
+            gsl_vector_get (xs, {{loop.index-1}}) {{comma()}}
+            {% endfor %}{{comma()}}
+
+            {% for name, std_value, expr in nonlinear_independent -%}
+                {{std_value}}  {{comma()}}
+                {% endfor %}
+        };
+
+
         Quantities quants = obj->_quantities(
+            {% set comma = joiner(",") %}
+            {%- if exprs is defined and exprs[0] is defined %}{{comma()}} x
+            {%- endif %}
+            {% if Sources is defined and Sources[0] is defined -%} {{ comma() }}
+            sources
+            {% endif -%}
+            {% if nonlinear is defined and nonlinear[0] is defined -%} {{ comma() }}
+            nonlinear
+            {% endif -%}
+            );
+
+        {% for name, std_value, expr in nonlinear_independent -%}
+               nonlinear.{{name}} = {{expr}};
+        {% endfor %}
+
+
+        
+
+        quants = obj->_quantities(
             {% set comma = joiner(",") %}
             {%- if exprs is defined and exprs[0] is defined %}{{comma()}} x
             {%- endif %}
