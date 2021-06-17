@@ -10,9 +10,12 @@
 - let use newton method the last determined value as start value for next one
 - build automatic tests https://www.benjack.io/2018/02/02/python-cpp-revisited.html 
 - https://github.com/cechrist/cardoon/tree/master/cardoon
+- https://www.analog.com/en/technical-articles/spice-differentiation.html#
 
 - implement hystersis effect
 - build in derivative  of expression for faster newton method
+
+- https://www.springer.com/gp/book/9783319673240
 
 ### subcircuts
 - implementation of subcircuit

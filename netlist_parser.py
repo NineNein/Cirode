@@ -191,6 +191,49 @@ def diode(line, component_list, namelist, model_list):
 
     return True
 
+def npn(line, component_list, namelist, model_list):
+
+
+    words = line.split()
+
+    if len(words) < 3:
+        return False
+
+    node_number = []
+    for w in words[1:4]:
+        if w.isdigit():
+            node_number.append(int(w))
+        else:
+            if w not in namelist:
+                namelist.append(w)
+            node_number.append(namelist.index(w))
+
+
+
+
+    success, words, nodes = True, words, node_number
+
+    print('npn ', nodes, words)
+
+    if not success:
+        return False
+
+    if words[0][0].lower() != "q":
+        print('q false')
+        return False
+
+    name = words[0].upper()
+
+    model_name = words[3]
+
+    for model in model_list:
+        if model.name == model_name:
+            break
+        
+    component_list.append(se.npn_bjt(name, nodes , model))
+
+    return True
+
 
 ### Model Section
 
@@ -200,8 +243,15 @@ def diode_model(name, model, params, model_list):
     model_list.append(circuit.Model(name, **params))
     return True
 
+def npn_model(name, model, params, model_list):
+    if model.upper() != "NPN":
+        return False
+    model_list.append(circuit.Model(name, **params))
+    return True
+
 models = [
-    diode_model
+    diode_model,
+    npn_model
 ]
 
 def model(line, model_list):
@@ -215,8 +265,11 @@ def model(line, model_list):
     str_params = output.group(3)
     str_params = str_params.lstrip().split(",")
 
+    print(str_params)
+
     params = {}
     for param in str_params:
+        
         key, value = param.split("=")
         key = key.translate(str.maketrans('', '', string.whitespace))
         value = value.translate(str.maketrans('', '', string.whitespace))
@@ -243,7 +296,8 @@ components = [
     votlage_source,
     ctrl_current_source,
     non_linear_cap,
-    diode
+    diode,
+    npn
 ]
 
 def parse_netlist(netlist_io):

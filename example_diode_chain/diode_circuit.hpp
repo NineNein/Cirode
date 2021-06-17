@@ -67,6 +67,7 @@ namespace diode_circuit
         double G1_D3 = 0.6;
         double G1_D4 = 0.6;
         
+        
     };
     
 
@@ -208,15 +209,35 @@ namespace diode_circuit
             }
             while (status == GSL_CONTINUE && iter < 1000);
 
-            
+
 
             struct Nonlinear nonlinear{
-                gsl_vector_get (s->x, 0) , 
-                gsl_vector_get (s->x, 1) , 
-                gsl_vector_get (s->x, 2) , 
+                
+                
+                gsl_vector_get (s->x, 0) 
+                ,
+                gsl_vector_get (s->x, 1) 
+                ,
+                gsl_vector_get (s->x, 2) 
+                ,
                 gsl_vector_get (s->x, 3) 
                 
+
+                
             };
+
+                Quantities quants = this->_quantities(
+                 x
+                ,
+                sources
+                ,
+                nonlinear
+                );
+
+            
+
+
+
             double test = 0;
             // test = gsl_vector_get (s->x, 0);
             // std::cout<<test<<std::endl;
@@ -318,20 +339,40 @@ namespace diode_circuit
 
     int root_finding(const gsl_vector * xs, void *params, gsl_vector * f){
 
-        struct Nonlinear nonlinear{
-            gsl_vector_get (xs, 0) , 
-            gsl_vector_get (xs, 1) , 
-            gsl_vector_get (xs, 2) , 
-            gsl_vector_get (xs, 3) 
-            
-        };
-
-
         diode_circuit* obj = ((struct r_params *) params)->obj;
 
         state_type x = ((struct r_params *) params)->x;
         Sources sources = ((struct r_params *) params)->sources;
+        struct Nonlinear nonlinear{
+            
+            
+            gsl_vector_get (xs, 0) 
+            ,
+            gsl_vector_get (xs, 1) 
+            ,
+            gsl_vector_get (xs, 2) 
+            ,
+            gsl_vector_get (xs, 3) 
+            
+
+            
+        };
+
+
         Quantities quants = obj->_quantities(
+             x
+            ,
+            sources
+            ,
+            nonlinear
+            );
+
+        
+
+
+        
+
+        quants = obj->_quantities(
              x
             ,
             sources
