@@ -38,14 +38,31 @@ ParserElement.setDefaultWhitespaceChars(' \t')
 
 NL = Suppress(LineEnd())
 
-#number_expr = pyparsing_common.number.copy()
-#value_unit = Group(number_expr("value") + Optional(Word(alphas))("unit"))
-#value = value_unit("unit_value") + NL
+
+used_param_start, used_param_end = Suppress('{'), Suppress('}')
+
+used_param = used_param_start + Word(alphanums) + used_param_end
+
+number_expr = pyparsing_common.number.copy()
+value_unit = Group(number_expr("value") + Optional(Word(alphas))("unit"))
+#value = (value_unit("unit_value") + NL) ^ (used_param("param") + NL)
 value = Word(printables) + NL
-passive = Char(alphas)("ident") + Word(nums)("number") + Group(OneOrMore( ~FollowedBy( value ) + Word(alphanums) ))("nodes")  + value 
+passive = Char(alphas, excludeChars='Xx')("ident") + Word(nums)("number") + Group(OneOrMore( ~FollowedBy( value ) + Word(alphanums) ))("nodes")  + value 
+
+# Xamp 5 4 2  ACamplifier PARAMS: Cin=20n Rbias=2.7K
+
+name = Word(printables, excludeChars='_=')
+
+param_start =  Suppress('PARAMS:')
+param = Group(name("name")  + Suppress(Char('=')) + name("default"))
+params = Group(param_start + OneOrMore(param))
+
+subopt = (Word(printables) + NL) ^ (Word(printables) + params + NL)
+
+subcir_elem = Char('Xx')("ident") + Word(alphanums)("name") + Group(OneOrMore( ~FollowedBy( subopt ) + Word(alphanums) ))("nodes")  + subopt 
 
 
-cmd_line = Group(passive)
+cmd_line = Group(passive | subcir_elem)
 cmd_lines = OneOrMore(cmd_line | NL)
 
 
@@ -54,11 +71,8 @@ sub_start, sub_end = Suppress('.SUBCKT'), Suppress('.ENDS')
 
 
 
-name = Word(printables, excludeChars='_=')
 
-param_start =  Suppress('PARAMS:')
-param = Group(name("name")  + Suppress(Char('=')) + name("default"))
-params = Group(param_start + OneOrMore(param))
+
 
 
 nodes = Group(OneOrMore(~FollowedBy(param_start) + Word(alphanums)))
@@ -90,7 +104,7 @@ def parse_netlist(netlist_io):
     circuits = queue.LifoQueue()
     cir = circuit.Circuit(circuit.GND)
 
-    subcircuits = []
+    subcircuits = {}
 
     top_cir = [cir, []]
 
@@ -108,17 +122,38 @@ def parse_netlist(netlist_io):
 
         value = tokens[3]
 
-        value = parse_value(value)
+        
 
         elm = None
         if idf.upper() == "R":
+            value = parse_value(value)
             elm = se.R(name, nodes, value)
 
         if idf.upper() == "C":
+            value = parse_value(value)
             elm = se.C(name, nodes, value)
 
         if idf.upper() == "L":
+            value = parse_value(value)
             elm = se.L(name, nodes, value)
+
+        if idf.upper() == "X":
+            print("Sub Cir ", tokens, nodes, value, tokens[4])
+
+            if value not in subcircuits:
+                raise ValueError("SubCircuit not found " + str(value))
+
+            params = {}
+
+
+            if len(tokens) == 5: #with params
+                for pname, pvalue in tokens[4]:
+                    params[pname] = parse_value(pvalue)
+
+            print('sub ', params)
+
+            model = circuit.Model(str(params), **params)
+            elm = subcircuits[value](name, nodes, model)
 
         if elm is not None:
             print("asd: ", elm.netlist_cmd())
@@ -133,19 +168,20 @@ def parse_netlist(netlist_io):
 
         params = {}
 
-        name = tokens[0]
+        sub_name = tokens[0]
         nodes = tokens[1]
 
         if len(tokens) == 3: #with params
             for name, value in tokens[2]:
                 params[name] = value
 
-        model = circuit.Model(name, **params)
-        sub = circuit.SubCircuit(name, nodes, model)
+        model = circuit.Model(sub_name, **params)
+        sub = circuit.SubCircuit(sub_name, nodes, model)
 
-        print(params)
+        #print(params)
 
-        subcircuits.append(sub)
+        subcircuits[sub_name] = sub
+
         circuits.put(top_cir)
         top_cir = [sub, []]
 
@@ -155,7 +191,8 @@ def parse_netlist(netlist_io):
         nonlocal top_cir, circuits
         print("e::", tokens)
 
-        
+        for c in top_cir[1]:
+            print(c.netlist_cmd())
         top_cir[0].define(top_cir[1])
 
         top_cir = circuits.get()
@@ -172,7 +209,9 @@ def parse_netlist(netlist_io):
 
     top_cir[0].define(top_cir[1])
 
-    print("netlist: ", cir.to_netlist())
+    print("netlist: \n", cir.to_netlist())
+
+    print(subcircuits.keys())
 
     return cir
 
@@ -187,11 +226,11 @@ if __name__ == '__main__':
 
     R1 1 2 1.000e+003 
 
-    C2 2 0 value
+    R2 2 0 value
     .ENDS
 
-    V1 0 1 1
-    X1 2 0 33
+    C1 0 1 1
+    X1 2 0 1 ddfd PARAMS: value=1231 v1alue=1231 
     """
 
     
